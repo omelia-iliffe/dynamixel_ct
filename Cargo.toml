@@ -1,0 +1,11 @@
+[package]
+name = "dynamixel_ct"
+version = "0.1.0-beta.0"
+edition = "2021"
+
+[features]
+default = ["dynamic_models"]
+dynamic_models = []
+
+[dependencies]
+enum_primitive = "0.1.1"
