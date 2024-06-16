@@ -2,7 +2,7 @@
 
 /// RegisterData is used to store the address, length and type of a register.
 ///  
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct RegisterData {
     /// The address of the register
     pub address: u16,
@@ -23,8 +23,8 @@ macro_rules! model {
         pub struct $model;
         impl $crate::control_table::ControlTable for $model {
             $(
-                fn $reg(&self) -> Result<$crate::register::RegisterData, $crate::control_table::NotImplemented>  {
-                    Ok(RegisterData {
+                fn $reg(&self) -> Option<$crate::register::RegisterData>  {
+                    Some(RegisterData {
                         address: $addr,
                         length: $len,
                     })

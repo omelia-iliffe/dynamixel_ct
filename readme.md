@@ -14,7 +14,7 @@
 The goal of this library is to provide the information for each register in the control table of a Dynamixel servo.  
 This library is intended to be used with an additional library that provides the communication protocol to the Dynamixel servo.
 
-The the data for register is currently limited to address and size (length), however expanding this to include the data type and access level is planned.
+The data for register is currently limited to address and size (length), however expanding this to include the data type and access level is planned.
 
 The library doesn't use the std library, so it can be used in embedded systems.
 
@@ -22,7 +22,7 @@ The library doesn't use the std library, so it can be used in embedded systems.
 The library can be used to return a control table when the model number is not known at compile time.  
 Allowing for a more dynamic approach to working with servos.
 
-If the servo model doesn't implement a register, the control table will return ```NotImplemented``` for the register.
+If the servo model doesn't implement a register, the control table will return `NotImplemented` for the register.
 
 ## Supported Servos
 
@@ -63,7 +63,7 @@ fn main() {
 ## Other Dynamixel Rust Libraries
 A few different libraries exist for communicating with Dynamixel servos in Rust:
     - [dynamixel2-rs](https://github.com/robohouse-delft/dynamixel2-rs) by RoboHouse Delft
-      - This implements protocol2.0, and my preferred choice.
+      - This implements protocol2.0.
     - [rustypot](https://github.com/pollen-robotics/rustypot) by Pollen Robotics
       - This library has its own method of implementing registers.
     - [dynamixel.rs](https://github.com/kjetilkjeka/dynamixel.rs) by kjetilkjeka (seems to be unmaintained)

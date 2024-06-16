@@ -6,16 +6,6 @@ use alloc::boxed::Box;
 use crate::control_table::ControlTable;
 use crate::models::*;
 
-#[derive(Debug, PartialEq)]
-
-/// Errors that can occur when creating a model from a model number.
-pub enum Error {
-    /// The model number is not known or is not yet supported.
-    UnknownModel,
-    /// The model known but the control table is not yet implemented.
-    NotImplemented,
-}
-
 /// Returns a new model from the model number.
 ///
 /// ```
@@ -23,7 +13,7 @@ pub enum Error {
 /// let model = new_from_model(1030);
 /// assert!(model.is_ok());
 /// ```
-pub fn new_from_model<T>(model_number: T) -> Result<Box<dyn ControlTable>, Error>
+pub fn new_from_model<T>(model_number: T) -> Result<Box<dyn ControlTable + Send>, Error>
 where
     T: TryInto<Model>,
 {
@@ -34,7 +24,9 @@ where
         Model::XC330_M181 | Model::XC330_M288 | Model::XC330_T181 | Model::XC330_T288 => {
             Ok(Box::new(XM430))
         }
-        Model::YM070_200_R051_R | Model::YM070_200_R099_R => Ok(Box::new(YM070)),
+        Model::YM070_200_R051_R | Model::YM070_200_R099_R | Model::YM070_200_A099_R | Model::YM080_230_R099_R => {
+            Ok(Box::new(YM))
+        }
         _ => Err(Error::NotImplemented),
     }
 }

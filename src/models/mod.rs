@@ -1,10 +1,18 @@
 //! Dynamixel model implementations
 //! Each model is defined in its own module, and implements the [`crate::ControlTable`] trait using the [`crate::model!`] macro.
+mod xm430;
+pub use xm430::XM430;
+mod ym;
+pub use ym::YM;
 
-pub mod xm430;
-pub use self::xm430::XM430;
-pub mod ym070;
-pub use self::ym070::YM070;
+/// Errors that can occur when creating a model from a model number.
+#[derive(Debug, PartialEq)]
+pub enum Error {
+    /// The model number is not known or is not yet supported.
+    UnknownModel,
+    /// The model known but the control table is not yet implemented.
+    NotImplemented,
+}
 
 #[cfg(feature = "dynamic_models")]
 pub mod dynamic_model;
@@ -89,8 +97,12 @@ enum_from_primitive! {
         XW540_T140 = 1180,
         XW540_T260 = 1170,
 
+        YM070_200_A099_R = 4050, // TODO: Check this is correct
         YM070_200_R099_R = 4030,
         YM070_200_R051_R = 4020,
+
+        YM080_230_R051_R = 4140, // TODO: Double check
+        YM080_230_R099_R = 4150,
 
         PRO_L42_10_S300_R = 35072,
         PRO_L54_30_S400_R = 37928,
@@ -104,10 +116,10 @@ enum_from_primitive! {
 pub struct UnknownModel;
 
 impl TryFrom<u16> for Model {
-    type Error = UnknownModel;
+    type Error = Error;
 
     fn try_from(model_number: u16) -> Result<Self, Self::Error> {
-        Model::from_u16(model_number).ok_or(UnknownModel)
+        Model::from_u16(model_number).ok_or(Error::UnknownModel)
     }
 }
 
@@ -117,10 +129,10 @@ mod tests {
 
     #[test]
     fn test_model_from_number() {
-        let model: Result<Model, UnknownModel> = 4030.try_into();
+        let model: Result<Model, Error> = 4030.try_into();
         assert_eq!(model, Ok(Model::YM070_200_R099_R));
 
-        let model: Result<Model, UnknownModel> = 1075.try_into();
-        assert_eq!(model, Err(UnknownModel));
+        let model: Result<Model, Error> = 1075.try_into();
+        assert_eq!(model, Err(Error::UnknownModel));
     }
 }
