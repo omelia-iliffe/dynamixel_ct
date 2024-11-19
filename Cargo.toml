@@ -1,11 +1,9 @@
 [package]
 name = "dynamixel_ct"
-version = "0.1.0-beta.0"
+version = "0.1.0"
 edition = "2021"
 
 [features]
-default = ["dynamic_models"]
-dynamic_models = []
 serde = ["dep:serde", "serde_repr", "strum"]
 
 [dependencies]

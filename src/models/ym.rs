@@ -1,6 +1,6 @@
 //! Dynamixel XM430 model definitions.
 
-use crate::{model, RegisterData};
+use crate::model;
 
 model![YM {
         model_number: 0, 2,

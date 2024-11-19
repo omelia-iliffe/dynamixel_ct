@@ -1,10 +1,13 @@
 use dynamixel_ct::{models, ControlTable};
+use dynamixel_ct::models::Model;
+use dynamixel_ct::register::Register::*;
 fn main() {
-    let xm430 = models::XM430;
-    let y = models::YM;
-    let new = dynamixel_ct::models::try_from_model(1030).unwrap();
+    let xm430 = models::XM430::new();
+    let y = models::YM::new();
+    let model = Model::try_from(1030).unwrap();
+    let new = ControlTable::new(model).unwrap();
 
-    println!("{:?}", xm430.goal_position());
-    println!("{:?}", y.goal_position());
-    println!("{:?}", new.goal_position());
+    println!("{:?}", xm430.get(goal_position));
+    println!("{:?}", y.get(goal_position));
+    println!("{:?}", new.get(goal_position));
 }

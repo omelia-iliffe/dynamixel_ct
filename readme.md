@@ -16,31 +16,32 @@ This library is intended to be used with an additional library that provides the
 
 The data for register is currently limited to address and size (length), however expanding this to include the data type and access level is planned.
 
-The library doesn't use the std library, so it can be used in embedded systems.
+The current implementation uses static hashmaps of registers internally so is not currently `no_std` compatible.
 
 ## Dynamic Control Table
-The library can be used to return a control table when the model number is not known at compile time.  
-Allowing for a more dynamic approach to working with servos.
+The library can be used to return a control table when the model number is not known at compile time,
+allowing for a more dynamic approach to working with servos.
 
-If the servo model doesn't implement a register, the control table will return `NotImplemented` for the register.
+If the servo model doesn't implement a register, the control table will return `` for the register.
 
 ## Supported Servos
 
 Currently supported servos include:
-    - XM430
-    - XM540
-    - XC330
-    - YM070
+ - XM430
+ - XM540
+ - XC330
+ - YM070
+
 with more to be added in the future.
 
 ## Usage
 
 #### Using a known model
 ```rust
-use dynamixel_ct::{models, ControlTable};
+use dynamixel_ct::{models, Register::*};
 fn main() {
-    let xm430 = models::XM430;
-    let goal_pos_register = xm430.goal_position();
+    let xm430 = models::XM430::new();
+    let goal_pos_register = xm430.get(goal_position);
     println!("Goal Position Register: {:?}", goal_pos_register);
     /// Output: Ok(RegisterData { address: 116, length: 4 })
 }
@@ -48,22 +49,25 @@ fn main() {
 
 #### Using a dynamic model
 ```rust
-use dynamixel_ct::{models, ControlTable};
+use dynamixel_ct::{models, ControlTable, Register::*};
 fn main() {
     // ping the motor to get the correct model number
     let model_num: u16 = 1030;
-    let motor = dynamixel_ct::models::new_from_model(model_num).unwrap();
-    println!("{:?}", motor.goal_position());
+    let model = Model::try_from(model_num).unwrap();
+    let motor = ControlTable::new(model).unwrap();
+
+    println!("{:?}", motor.get(goal_position));
     /// Output: Ok(RegisterData { address: 116, length: 4 })
 }
 ```
 
 
 
+
 ## Other Dynamixel Rust Libraries
 A few different libraries exist for communicating with Dynamixel servos in Rust:
-    - [dynamixel2-rs](https://github.com/robohouse-delft/dynamixel2-rs) by RoboHouse Delft
-      - This implements protocol2.0.
-    - [rustypot](https://github.com/pollen-robotics/rustypot) by Pollen Robotics
-      - This library has its own method of implementing registers.
-    - [dynamixel.rs](https://github.com/kjetilkjeka/dynamixel.rs) by kjetilkjeka (seems to be unmaintained)
+- [dynamixel2-rs](https://github.com/robohouse-delft/dynamixel2-rs) by RoboHouse Delft
+  - This implements protocol2.0.
+- [rustypot](https://github.com/pollen-robotics/rustypot) by Pollen Robotics
+  - This library has its own method of implementing registers.
+- [dynamixel.rs](https://github.com/kjetilkjeka/dynamixel.rs) by kjetilkjeka (seems to be unmaintained)

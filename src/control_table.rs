@@ -1,118 +1,61 @@
-//! The [`ControlTable`] Trait provides a way to access the registers of a Dynamixel Servo
-//! without knowing the exact model.
+//! Control table for a specific model.
+//!
+//! The control table is statically allocated to reduce memory usage.
+//!
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use crate::models::{Error, Model, XM430, YM};
+use crate::register::Register;
+use crate::RegisterData;
 
-use crate::register::RegisterData;
+/// A control table for a specific model.
+/// The table is statically allocated to reduce memory usage.
+#[derive(Debug, PartialEq, Eq, Clone, derive_more::Display)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(try_from = "Model"))]
+#[display("ControlTable({model})")]
+pub struct ControlTable {
+    model: Model,
+    table: &'static HashMap<Register, RegisterData>,
+}
 
-macro_rules! control_table_gen {
-    ($($reg:ident,)+) => {
-        /// The [`ControlTable`] Trait provides a way to access the registers of a Dynamixel Servo
-        /// The trait provides getter functions for every possible register. If a model does not implement a register, the getter will return [`NotImplemented`].
-        ///
-        /// # Example
-        ///
-        /// ```
-        /// use dynamixel_ct::ControlTable;
-        /// use dynamixel_ct::models::XM430;
-        /// use dynamixel_ct::register::RegisterData;
-        ///
-        /// let model = XM430;
-        /// let register = model.model_number().unwrap();
-        ///
-        /// assert_eq!(register, RegisterData { address: 0, length: 2 });
-        /// ```
-        pub trait ControlTable {
-            $(
-                /// Returns the [`RegisterData`] for the $reg register.
-                fn $reg(&self) -> Option<RegisterData> {
-                    None
-                }
-            )+
-        }
+impl ControlTable {
+    /// Create a new control table for a specific model. If the model is not yet implemented, the error [`Error::NotImplemented`] is returned.
+    pub fn new(model: Model) -> Result<Self, Error> {
+        let table = match model {
+            Model::XM430_W210 | Model::XM430_W350 => XM430::table(),
+            Model::XM540_W150 | Model::XM540_W270 => XM430::table(),
+            Model::XC330_M181
+            | Model::XC330_M288
+            | Model::XC330_T181
+            | Model::XC330_T288 => XM430::table(),
+            Model::YM070_200_R051_R
+            | Model::YM070_200_R099_R
+            | Model::YM070_200_A099_R
+            | Model::YM080_230_R099_R => YM::table(),
+            _ => return Err(Error::NotImplemented),
+        };
+        Ok(ControlTable {
+            model,
+            table,
+        })
+    }
+
+    /// Get the model for this control table.
+    pub fn model(&self) -> Model {
+        self.model
+    }
+
+    /// Get the register data for a specific register.
+    pub fn get(&self, register: Register) -> Option<&RegisterData> {
+        self.table.get(&register)
     }
 }
-control_table_gen!(
-    model_number,
-    model_information,
-    firmware_version,
-    id,
-    baud_rate,
-    return_delay_time,
-    drive_mode,
-    operating_mode,
-    secondary_id,
-    protocol_version,
-    homing_offset,
-    moving_threshold,
-    temperature_limit,
-    motor_temperature_limit,
-    max_voltage_limit,
-    min_voltage_limit,
-    pwm_limit,
-    current_limit,
-    acceleration_limit,
-    velocity_limit,
-    max_position_limit,
-    min_position_limit,
-    startup_configuration,
-    shutdown,
-    torque_enable,
-    led,
-    status_return_level,
-    registered_instruction,
-    hardware_error_status,
-    velocity_i_gain,
-    velocity_p_gain,
-    position_p_gain,
-    feedforward_2nd_gain,
-    feedforward_1st_gain,
-    bus_watchdog,
-    goal_pwm,
-    goal_current,
-    goal_velocity,
-    profile_acceleration,
-    profile_velocity,
-    goal_position,
-    real_time_tick,
-    moving,
-    moving_status,
-    present_pwm,
-    present_current,
-    present_velocity,
-    present_position,
-    velocity_trajectory,
-    position_trajectory,
-    present_input_voltage,
-    present_temperature,
-    present_motor_temperature,
-    backup_ready,
-    startup_config,
-    in_position_threshold,
-    following_error_threshold,
-    gear_ratio_numerator,
-    gear_ratio_denominator,
-    safe_stop_time,
-    brake_delay,
-    goal_update_delay,
-    overexcitation_voltage,
-    normal_excitation_voltage,
-    overexcitation_time,
-    notch_filter_frequency,
-    notch_filter_bandwidth,
-    notch_filter_depth,
-    present_velocity_lpf_frequency,
-    goal_current_lpf_frequency,
-    position_ff_lpf_time,
-    velocity_ff_lpf_time,
-    control_state,
-    error_code,
-    gain_save,
-    velocity_ff_gain,
-    position_d_gain,
-    position_i_gain,
-    position_ff_gain,
-    profile_acceleration_time,
-    profile_time,
-    pwm_offset,
-    current_offset,
-    velocity_offset,
-);
+
+impl TryFrom<Model> for ControlTable {
+    type Error = Error;
+    fn try_from(model: Model) -> Result<Self, Self::Error> {
+        ControlTable::new(model)
+    }
+}

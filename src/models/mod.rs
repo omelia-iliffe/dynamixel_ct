@@ -1,5 +1,5 @@
 //! Dynamixel model implementations
-//! Each model is defined in its own module, and implements the [`crate::ControlTable`] trait using the [`crate::model!`] macro.
+//! Each model is defined in its own module.
 mod xm430;
 
 pub use xm430::XM430;
@@ -15,15 +15,10 @@ pub enum Error {
     NotImplemented,
 }
 
-#[cfg(feature = "dynamic_models")]
-pub mod dynamic_model;
-#[cfg(feature = "dynamic_models")]
-pub use self::dynamic_model::try_from_model;
-
 use num_derive::{FromPrimitive, ToPrimitive};
-use num_traits::FromPrimitive;
+use num_traits::{FromPrimitive, ToPrimitive};
 #[cfg(feature = "serde")]
-use serde::{de, Deserialize, Deserializer, Serialize};
+use serde::{de, Deserialize, Deserializer};
 #[cfg(feature = "serde")]
 use serde_repr::Serialize_repr;
 #[cfg(feature = "serde")]
@@ -31,8 +26,8 @@ use strum::EnumString;
 #[cfg(feature = "serde")]
 use core::str::FromStr;
 
-/// Dynamixel model numbers
-#[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive, ToPrimitive)]
+/// Dynamixel model names and numbers
+#[derive(PartialEq, Eq, Clone, Copy, FromPrimitive, ToPrimitive, derive_more::Display)]
 #[repr(u16)]
 #[allow(non_camel_case_types)]
 #[allow(missing_docs)]
@@ -145,49 +140,11 @@ impl<'de> Deserialize<'de> for Model {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, FromPrimitive, ToPrimitive, derive_more::Display)]
-#[repr(u16)]
-#[allow(non_camel_case_types)]
-#[allow(missing_docs)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde", serde(try_from = "Model"))]
-pub enum SupportedModel {
-    XM430_W210 = 1030,
-    XM430_W350 = 1020,
-    XM540_W150 = 1130,
-    XM540_W270 = 1120,
-    XC330_M181 = 1230,
-    XC330_M288 = 1240,
-    XC330_T181 = 1210,
-    XC330_T288 = 1220,
-    YM070_200_R051_R = 4020,
-    YM070_200_R099_R = 4030,
-    YM070_200_A099_R = 4050,
-    YM080_230_R099_R = 4150,
-}
-
-impl TryFrom<Model> for SupportedModel {
-    type Error = Error;
-
-    fn try_from(value: Model) -> Result<Self, Self::Error> {
-        match value {
-            Model::XM430_W210 => Ok(SupportedModel::XM430_W210),
-            Model::XM430_W350 => Ok(SupportedModel::XM430_W350),
-            Model::XM540_W150 => Ok(SupportedModel::XM540_W150),
-            Model::XM540_W270 => Ok(SupportedModel::XM540_W270),
-            Model::XC330_M181 => Ok(SupportedModel::XC330_M181),
-            Model::XC330_M288 => Ok(SupportedModel::XC330_M288),
-            Model::XC330_T181 => Ok(SupportedModel::XC330_T181),
-            Model::XC330_T288 => Ok(SupportedModel::XC330_T288),
-            Model::YM070_200_R051_R => Ok(SupportedModel::YM070_200_R051_R),
-            Model::YM070_200_R099_R => Ok(SupportedModel::YM070_200_R099_R),
-            Model::YM070_200_A099_R => Ok(SupportedModel::YM070_200_A099_R),
-            Model::YM080_230_R099_R => Ok(SupportedModel::YM080_230_R099_R),
-            _ => Err(Error::NotImplemented),
-        }
+impl core::fmt::Debug for Model {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{}({})", self, *self as u16)
     }
 }
-
 /// If a model is not implemented, this error is returned.
 /// Either the Model doesn't exist or it hasn't been implemented yet.
 #[derive(Debug, PartialEq, Eq)]
@@ -201,6 +158,12 @@ impl TryFrom<u16> for Model {
     }
 }
 
+impl PartialEq<u16> for Model {
+    fn eq(&self, other: &u16) -> bool {
+        self.to_u16() == Some(*other)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -208,6 +171,7 @@ mod tests {
     #[test]
     fn test_model_from_number() {
         let model: Result<Model, Error> = 4030.try_into();
+        dbg!(&model);
         assert_eq!(model, Ok(Model::YM070_200_R099_R));
 
         let model: Result<Model, Error> = 1075.try_into();
@@ -223,11 +187,5 @@ mod tests {
 
         let model: Model = serde_json::from_str("\"XM430_W350\"").unwrap();
         assert_eq!(model, Model::XM430_W210);
-    }
-    #[test]
-    #[cfg(feature = "serde")]
-    fn test_unsupported_model() {
-        let model: Result<SupportedModel, _> = serde_json::from_str("\"AX12A\"");
-        assert!(model.is_err());
     }
 }
