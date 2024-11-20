@@ -2,6 +2,10 @@
 name = "dynamixel_ct"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+readme = "readme.md"
+repository = "https:://github.com/omelia-iliffe/dynamixel_ct"
+description = "A crate for working with the control tables of Dynamixel servos"
 
 [features]
 serde = ["dep:serde", "serde_repr", "strum"]
