@@ -220,13 +220,9 @@ impl ControlTableRow {
     }
 
     fn to_macro_line(self) -> String {
-        let comment = format!(
-            "access: {} initial_value: {:?} area: {}",
-            self.access, self.initial_value, self.area
-        );
         format!(
-            "{}: {}, {}, \"{}\",\n",
-            self.data_name, self.address, self.size, comment
+            "{}: {}, {},\n",
+            self.data_name, self.address, self.size,
         )
     }
 }
