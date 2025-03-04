@@ -7,7 +7,7 @@ fn main() {
     let model = Model::try_from(1030).unwrap();
     let new = ControlTable::new(model).unwrap();
 
-    println!("{:?}", xm430.get(goal_position));
-    println!("{:?}", y.get(goal_position));
-    println!("{:?}", new.get(goal_position));
+    println!("{:?}", xm430.get(GoalPosition));
+    println!("{:?}", y.get(GoalPosition));
+    println!("{:?}", new.get(GoalPosition));
 }
