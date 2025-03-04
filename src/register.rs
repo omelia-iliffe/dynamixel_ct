@@ -11,8 +11,8 @@ pub struct RegisterData {
 }
 
 #[allow(missing_docs)]
-#[derive(Clone, Copy, Eq, PartialEq, Debug, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Clone, Copy, Eq, PartialEq, Debug, Hash, Ord, PartialOrd, derive_more::Display)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize, strum::EnumString))]
 pub enum Register {
     ModelNumber,
 	ModelInformation,
