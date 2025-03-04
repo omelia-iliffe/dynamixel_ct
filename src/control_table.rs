@@ -85,10 +85,10 @@ mod tests {
     #[test]
     fn ym() {
         let models = [
-            Model::YM070_200_R051_R,
-            Model::YM070_200_R099_R,
-            Model::YM070_200_A099_R,
-            Model::YM080_230_R099_R,
+            Model::YM070_200_R051_RH,
+            Model::YM070_200_R099_RH,
+            Model::YM070_200_A099_RH,
+            Model::YM080_230_R099_RH,
         ];
 
         for model in models {

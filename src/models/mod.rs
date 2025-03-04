@@ -4,6 +4,8 @@ mod xm430;
 
 pub use xm430::XM430;
 mod ym;
+mod generated;
+
 pub use ym::YM;
 
 /// Errors that can occur when creating a model from a model number.
@@ -33,32 +35,6 @@ use core::str::FromStr;
 #[allow(missing_docs)]
 #[cfg_attr(feature = "serde", derive(Serialize_repr, EnumString))]
 pub enum Model {
-    AX12A = 12,
-    AX12W = 300,
-    AX18A = 18,
-
-    RX10 = 10,
-    RX24F = 24,
-    RX28 = 28,
-    RX64 = 64,
-
-    DX113 = 113,
-    DX116 = 116,
-    DX117 = 117,
-
-    EX106 = 107,
-
-    MX12W = 360,
-    MX28 = 29,
-    MX64 = 310,
-    MX106 = 320,
-
-    MX28_2 = 30,
-    MX64_2 = 311,
-    MX106_2 = 321,
-
-    XL320 = 350,
-
     XL330_M077 = 1190,
     XL330_M288 = 1200,
 
@@ -70,10 +46,8 @@ pub enum Model {
 
     XC430_W150 = 1070,
     XC430_W240 = 1080,
-    XXC430_W250 = 1160,
 
     XL430_W250 = 1060,
-    XXL430_W250 = 1090,
 
     XM430_W210 = 1030,
     XM430_W350 = 1020,
@@ -97,22 +71,31 @@ pub enum Model {
     XD540_T150 = 1111,
     XD540_T270 = 1101,
 
-    XW430_T200 = 1280,
-    XW430_T333 = 1270,
     XW540_T140 = 1180,
     XW540_T260 = 1170,
 
-    YM070_200_A099_R = 4050, // TODO: Check this is correct
-    YM070_200_R099_R = 4030,
-    YM070_200_R051_R = 4020,
+    XW540_H260 = 1310,
 
-    YM080_230_R051_R = 4140, // TODO: Double check
-    YM080_230_R099_R = 4150,
+    PH42_020_S300_R = 2000,
+    PH54_100_S500_R = 2010,
+    PH54_200_S500_R = 2020,
+    PM42_010_S260_R = 2100,
+    PM54_040_S250_R = 2110,
+    PM54_060_S250_R = 2120,
 
-    PRO_L42_10_S300_R = 35072,
-    PRO_L54_30_S400_R = 37928,
-    PRO_L54_30_S500_R = 37896,
-    PRO_L54_50_S290_R = 38176,
+    YM070_210_M001_RH = 4000,
+    YM070_210_B001_RH = 4010,
+    YM070_200_R051_RH = 4020,
+    YM070_200_R099_RH = 4030,
+    YM070_210_A051_RH = 4040,
+    YM070_200_A099_RH = 4050,
+
+    YM080_230_M001_RH = 4120,
+    YM080_230_B001_RH = 4130,
+    YM080_230_R051_RH = 4140,
+    YM080_230_R099_RH = 4150,
+    YM080_230_A051_RH = 4160,
+    YM080_230_A099_RH = 4170,
 }
 
 #[cfg(feature = "serde")]
@@ -126,13 +109,13 @@ impl<'de> Deserialize<'de> for Model {
                 formatter.write_str("a valid dynamixel model or model number")
             }
 
-            fn visit_u64<E: de::Error>(self, value: u64) -> Result<Self::Value, E> {
-                Model::from_u64(value)
-                    .ok_or_else(|| E::invalid_value(de::Unexpected::Unsigned(value), &self))
-            }
             fn visit_i64<E: de::Error>(self, value: i64) -> Result<Self::Value, E> {
                 Model::from_i64(value)
                     .ok_or_else(|| E::invalid_value(de::Unexpected::Signed(value), &self))
+            }
+            fn visit_u64<E: de::Error>(self, value: u64) -> Result<Self::Value, E> {
+                Model::from_u64(value)
+                    .ok_or_else(|| E::invalid_value(de::Unexpected::Unsigned(value), &self))
             }
 
             fn visit_str<E: de::Error>(self, value: &str) -> Result<Self::Value, E> {
@@ -176,7 +159,7 @@ mod tests {
     fn test_model_from_number() {
         let model: Result<Model, Error> = 4030.try_into();
         dbg!(&model);
-        assert_eq!(model, Ok(Model::YM070_200_R099_R));
+        assert_eq!(model, Ok(Model::YM070_200_R099_RH));
 
         let model: Result<Model, Error> = 1075.try_into();
         assert_eq!(model, Err(Error::UnknownModel));
