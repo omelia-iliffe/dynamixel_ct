@@ -29,7 +29,7 @@ use strum::EnumString;
 use core::str::FromStr;
 
 /// Dynamixel model names and numbers
-#[derive(PartialEq, Eq, Clone, Copy, FromPrimitive, ToPrimitive, derive_more::Display)]
+#[derive(PartialEq, Eq, Clone, Copy, FromPrimitive, ToPrimitive, derive_more::Display, Ord, PartialOrd)]
 #[repr(u16)]
 #[allow(non_camel_case_types)]
 #[allow(missing_docs)]
