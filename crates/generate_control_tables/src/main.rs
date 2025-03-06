@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Context, Result};
 use convert_case::{Case, Casing};
-use dynamixel_ct::models::Model as DModel;
-use dynamixel_ct::Register;
+use dynamixel_registers::models::Model as DModel;
+use dynamixel_registers::Register;
 use itertools::Itertools;
 use num_traits::FromPrimitive;
 use regex::Regex;
@@ -34,7 +34,7 @@ impl ModelGroup {
     fn calc_alias(&mut self) {
         self.alias = self.model.iter().fold(BTreeMap::new(), |mut acc, model| {
             let alias = model.to_string().split("_").nth(0).unwrap().to_string();
-            acc.entry(alias).or_default().push(model.clone());
+            acc.entry(alias).or_default().push(*model);
             acc
         });
     }
@@ -45,7 +45,7 @@ fn main() -> Result<()> {
         clone_emanual()?
     }
 
-    let dirs = vec![
+    let dirs = [
         "emanual/docs/en/dxl/x",
         "emanual/docs/en/dxl/y",
         "emanual/docs/en/dxl/p",
@@ -58,7 +58,7 @@ fn main() -> Result<()> {
         .filter(|f| filter_files(f))
         .map(|file| {
             println!("parsing table {}", file.display());
-            parse_table(&file).with_context(|| anyhow!("error parsing {:?}", file))
+            parse_table(file).with_context(|| anyhow!("error parsing {:?}", file))
         })
         .try_collect()?;
 
@@ -154,7 +154,7 @@ fn filter_files(path: impl AsRef<Path>) -> bool {
 
 fn clone_emanual() -> Result<()> {
     let clone = Command::new("git")
-        .args(&[
+        .args([
             "clone",
             "https://github.com/ROBOTIS-GIT/emanual.git",
             "--depth",
@@ -181,7 +181,8 @@ fn collect_model_files(
     r
 }
 
-#[derive(Debug, Clone, Eq, Ord)]
+#[derive(Debug, Clone, Eq)]
+#[expect(dead_code)]
 struct ControlTableRow {
     address: u16,
     size: u16,
@@ -195,11 +196,10 @@ struct ControlTableRow {
 
 impl PartialEq for ControlTableRow {
     fn eq(&self, other: &Self) -> bool {
-        let base = self.address == other.address
+        self.address == other.address
             && self.size == other.size
             && self.data_name == other.data_name
-            && self.access == other.access;
-        base
+            && self.access == other.access
         //
         // if self.data_name != Register::ModelNumber {
         //     if self.range != other.range {
@@ -209,6 +209,12 @@ impl PartialEq for ControlTableRow {
         // } else {
         //     base
         // }
+    }
+}
+
+impl Ord for ControlTableRow {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.address.cmp(&other.address)
     }
 }
 
@@ -300,8 +306,7 @@ impl ControlTableRow {
 #[derive(Debug, Clone)]
 struct Model {
     name: String,
-    model: dynamixel_ct::models::Model,
-    model_number: u16,
+    model: dynamixel_registers::models::Model,
     table: BTreeMap<Register, ControlTableRow>,
 }
 
@@ -314,7 +319,7 @@ fn to_model_macro_from_group(file: &mut File, model_group: &ModelGroup) -> Resul
     writeln!(file)?;
     writeln!(file, "model![{} {{", model_group.alias.keys().join(" "))?;
 
-    for (_, row) in &model_group.table {
+    for row in model_group.table.values() {
         writeln!(
             file,
             "{}: {}, {},",
@@ -390,7 +395,7 @@ fn parse_table(model_file: impl AsRef<Path>) -> Result<Model> {
         .unwrap_or_default() as u16;
     let name = file_name
         .split(".")
-        .nth(0)
+        .next()
         .unwrap()
         .to_string()
         .to_uppercase()
@@ -402,7 +407,6 @@ fn parse_table(model_file: impl AsRef<Path>) -> Result<Model> {
     let model = Model {
         name,
         model,
-        model_number,
         table,
     };
 

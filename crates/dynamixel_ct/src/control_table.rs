@@ -5,10 +5,10 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use regex::Regex;
-use crate::models::{Error, Model, XM430, YM};
-use crate::register::Register;
-use crate::RegisterData;
+use dynamixel_registers::models::Model;
+use dynamixel_registers::error::Error;
+use dynamixel_registers::Register;
+use dynamixel_registers::RegisterData;
 
 /// A control table for a specific model.
 /// The table is statically allocated to reduce memory usage.
@@ -24,18 +24,7 @@ pub struct ControlTable {
 impl ControlTable {
     /// Create a new control table for a specific model. If the model is not yet implemented, the error [`Error::NotImplemented`] is returned.
     pub fn new(model: Model) -> Result<Self, Error> {
-        let table = {
-            let model = model.to_string();
-            if Regex::new(r"X\w430|540").unwrap().is_match(&model) {
-                XM430::table()
-            } else if Regex::new(r"X\w330").unwrap().is_match(&model) {
-                XM430::table()
-            } else if Regex::new(r"YM.*").unwrap().is_match(&model) {
-                YM::table()
-            } else {
-                return Err(Error::NotImplemented);
-            }
-        };
+        let table = crate::models::control_table(&model);
         Ok(ControlTable {
             model,
             table,
@@ -62,6 +51,7 @@ impl TryFrom<Model> for ControlTable {
 
 #[cfg(test)]
 mod tests {
+    use dynamixel_registers::models::Model;
     use crate::models::{XM430, YM070};
     use super::*;
     #[test]

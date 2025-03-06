@@ -3,173 +3,10 @@
 mod generated;
 pub use generated::*;
 
-/// Errors that can occur when creating a model from a model number.
-#[derive(Debug, PartialEq, derive_more::Display, derive_more::Error)]
-pub enum Error {
-    /// The model number is not known or is not yet supported.
-    UnknownModel,
-    /// The model known but the control table is not yet implemented.
-    NotImplemented,
-}
-
-#[cfg(feature = "serde")]
-use core::str::FromStr;
-use num_derive::{FromPrimitive, ToPrimitive};
-use num_traits::{FromPrimitive, ToPrimitive};
-#[cfg(feature = "serde")]
-use serde::{de, Deserialize, Deserializer};
-#[cfg(feature = "serde")]
-use serde_repr::Serialize_repr;
-#[cfg(feature = "serde")]
-use strum::EnumString;
-
-/// Dynamixel model names and numbers
-#[derive(
-    PartialEq, Eq, Clone, Copy, FromPrimitive, ToPrimitive, derive_more::Display, Ord, PartialOrd,
-)]
-#[repr(u16)]
-#[allow(non_camel_case_types)]
-#[allow(missing_docs)]
-#[cfg_attr(feature = "serde", derive(Serialize_repr, EnumString))]
-pub enum Model {
-    XL330_M077 = 1190,
-    XL330_M288 = 1200,
-
-    XC330_M181 = 1230,
-    XC330_M288 = 1240,
-
-    XC330_T181 = 1210,
-    XC330_T288 = 1220,
-
-    XC430_W150 = 1070,
-    XC430_W240 = 1080,
-
-    XL430_W250 = 1060,
-
-    XM430_W210 = 1030,
-    XM430_W350 = 1020,
-
-    XM540_W150 = 1130,
-    XM540_W270 = 1120,
-
-    XH430_V210 = 1050,
-    XH430_V350 = 1040,
-    XH430_W210 = 1010,
-    XH430_W350 = 1000,
-
-    XH540_W150 = 1110,
-    XH540_W270 = 1100,
-    XH540_V150 = 1150,
-    XH540_V270 = 1140,
-
-    XD430_T210 = 1011,
-    XD430_T350 = 1001,
-
-    XD540_T150 = 1111,
-    XD540_T270 = 1101,
-
-    XW540_T140 = 1180,
-    XW540_T260 = 1170,
-
-    XW540_H260 = 1310,
-
-    PH42_020_S300_R = 2000,
-    PH54_100_S500_R = 2010,
-    PH54_200_S500_R = 2020,
-    PM42_010_S260_R = 2100,
-    PM54_040_S250_R = 2110,
-    PM54_060_S250_R = 2120,
-
-    YM070_210_M001_RH = 4000,
-    YM070_210_B001_RH = 4010,
-    YM070_200_R051_RH = 4020,
-    YM070_200_R099_RH = 4030,
-    YM070_210_A051_RH = 4040,
-    YM070_200_A099_RH = 4050,
-
-    YM080_230_M001_RH = 4120,
-    YM080_230_B001_RH = 4130,
-    YM080_230_R051_RH = 4140,
-    YM080_230_R099_RH = 4150,
-    YM080_230_A051_RH = 4160,
-    YM080_230_A099_RH = 4170,
-}
-
-pub enum ModelGroup {
-    XD540,
-    XH540,
-    XM540,
-    XC430,
-    XW540,
-    XC330,
-    XL330,
-    XD430,
-    XH430,
-    XM430,
-    YM070,
-    YM080,
-    PH42,
-    PH54,
-    PM42,
-    PM54,
-}
-
-#[cfg(feature = "serde")]
-impl<'de> Deserialize<'de> for Model {
-    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Model, D::Error> {
-        struct Visitor;
-        impl<'de> de::Visitor<'de> for Visitor {
-            type Value = Model;
-
-            fn expecting(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-                formatter.write_str("a valid dynamixel model or model number")
-            }
-
-            fn visit_i64<E: de::Error>(self, value: i64) -> Result<Self::Value, E> {
-                Model::from_i64(value)
-                    .ok_or_else(|| E::invalid_value(de::Unexpected::Signed(value), &self))
-            }
-            fn visit_u64<E: de::Error>(self, value: u64) -> Result<Self::Value, E> {
-                Model::from_u64(value)
-                    .ok_or_else(|| E::invalid_value(de::Unexpected::Unsigned(value), &self))
-            }
-
-            fn visit_str<E: de::Error>(self, value: &str) -> Result<Self::Value, E> {
-                Model::from_str(value)
-                    .map_err(|_| E::invalid_value(de::Unexpected::Str(value), &self))
-            }
-        }
-        d.deserialize_any(Visitor)
-    }
-}
-
-impl core::fmt::Debug for Model {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{}({})", self, *self as u16)
-    }
-}
-/// If a model is not implemented, this error is returned.
-/// Either the Model doesn't exist or it hasn't been implemented yet.
-#[derive(Debug, PartialEq, Eq)]
-pub struct UnknownModel;
-
-impl TryFrom<u16> for Model {
-    type Error = Error;
-
-    fn try_from(model_number: u16) -> Result<Self, Self::Error> {
-        Model::from_u16(model_number).ok_or(Error::UnknownModel)
-    }
-}
-
-impl PartialEq<u16> for Model {
-    fn eq(&self, other: &u16) -> bool {
-        self.to_u16() == Some(*other)
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use dynamixel_registers::error::Error;
+    use dynamixel_registers::models::Model;
 
     #[test]
     fn test_model_from_number() {
@@ -197,7 +34,7 @@ mod tests {
     #[test]
     #[cfg(feature = "serde")]
     fn test_serde_toml() {
-        #[derive(Deserialize, serde::Serialize)]
+        #[derive(serde::Deserialize, serde::Serialize)]
         struct Test {
             model: Model,
         }

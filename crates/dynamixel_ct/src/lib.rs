@@ -5,34 +5,36 @@
 //!
 //! ## Example
 //! ```rust
-//! use dynamixel_ct::{models, Register::*};
+//! use dynamixel_ct::{models };
+//! use dynamixel_registers::Register;
 //! let xm430 = models::XM430::new();
 //!
-//! println!("{:?}", xm430.get(goal_position));
-//! println!("{:?}", xm430.get(goal_current));
-//! println!("{:?}", xm430.get(goal_velocity));
+//! println!("{:?}", xm430.get(Register::GoalPosition));
+//! println!("{:?}", xm430.get(Register::GoalCurrent));
+//! println!("{:?}", xm430.get(Register::GoalVelocity));
 //! ```
 //!
 //! ### Example
 //! ```rust
-//! use dynamixel_ct::{models, ControlTable, Register::*};
+//! use dynamixel_ct::{models, ControlTable};
+//! use dynamixel_registers::Register::*;
+//! use dynamixel_registers::models::Model;
 //! let xm430 = models::XM430::new();
-//! let y = models::YM::new();
-//! let new = ControlTable::new(models::Model::XM430_W210).unwrap();
+//! let y = models::YM070::new();
+//! let new = ControlTable::new(Model::XM430_W210).unwrap();
 //!
-//! println!("{:?}", xm430.get(goal_position));
-//! println!("{:?}", y.get(goal_position));
-//! println!("{:?}", new.get(goal_position));
+//! println!("{:?}", xm430.get(GoalPosition));
+//! println!("{:?}", y.get(GoalPosition));
+//! println!("{:?}", new.get(GoalPosition));
 //! ```
-#![warn(missing_docs)]
+// #![warn(missing_docs)]
 
 pub mod control_table;
 pub mod models;
-pub mod register;
 mod model_macro;
 
 pub use control_table::ControlTable;
-pub use register::{RegisterData, Register};
+pub use dynamixel_registers::{RegisterData, Register};
 
 pub(crate) use model_macro::model;
 

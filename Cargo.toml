@@ -3,4 +3,4 @@ resolver = "2"
 members = ["crates/*"]
 
 [workspace.dependencies]
-dynamixel_ct = {path = "crates/dynamixel_ct", features = ["serde"]}
+dynamixel_registers = {path = "crates/dynamixel_registers"}
