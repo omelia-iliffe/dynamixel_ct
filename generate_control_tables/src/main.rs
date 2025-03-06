@@ -6,18 +6,37 @@ use itertools::Itertools;
 use num_traits::FromPrimitive;
 use regex::Regex;
 use std::cmp::Ordering;
-use std::collections::{BTreeSet, };
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
+use std::fs::File;
 use std::io::Write;
 use std::ops::Not;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str::FromStr;
 
+#[derive(Debug, Clone)]
 struct ModelGroup {
     name: String,
-    model: Vec<DModel>,
-    table: BTreeSet<ControlTableRow>,
+    alias: BTreeSet<String>,
+    model: BTreeSet<DModel>,
+    table: BTreeMap<Register, ControlTableRow>,
+}
+
+
+impl ModelGroup {
+    fn table_name(&self) -> String {
+        self.name.to_uppercase()
+    }
+
+    fn file_name(&self) -> String {
+        self.name.to_lowercase()
+    }
+    fn calc_alias(&mut self) {
+        self.alias = self.model.iter().flat_map(|model| {
+            Some(model.to_string().split("_").nth(0)?.to_string())
+        }).collect();
+    }
 }
 
 fn main() -> Result<()> {
@@ -45,12 +64,18 @@ fn main() -> Result<()> {
     let mut all_models: Vec<ModelGroup> = Vec::new();
 
     for m in &models {
-        if let Some(mg) = all_models.iter_mut().find(|mg| mg.table == m.table) {
-            mg.model.push(m.model)
+        if let Some(mg) = all_models.iter_mut().find(|mg| {
+            println!("comparing {} with {}", mg.name, m.model);
+            mg.table == m.table
+        }) {
+            mg.model.insert(m.model);
         } else {
+            let mut model = BTreeSet::new();
+            model.insert(m.model);
             all_models.push(ModelGroup {
                 name: m.name.clone(),
-                model: vec![m.model],
+                alias: BTreeSet::new(),
+                model,
                 table: m.table.clone(),
             })
         }
@@ -63,19 +88,52 @@ fn main() -> Result<()> {
     println!("total model groups {}", all_models.len());
 
     let generate_path: PathBuf = "src/models/generated/".into();
+    fs::remove_dir_all(&generate_path)?;
     let mod_path = generate_path.join("mod.rs");
 
     if fs::exists(&mod_path)? {
         fs::remove_file(&mod_path)?;
     }
 
-    all_models.into_iter().try_for_each(|model| {
-        let path = generate_path.join(format!("{}.rs", model.name));
+    all_models.iter_mut().for_each(|mg| mg.calc_alias());
+
+    all_models.clone().into_iter().try_for_each(|model| {
+        let path = generate_path.join(format!("{}.rs", model.file_name()));
 
         write_file_model_group(&mod_path, &path, model)?;
         anyhow::Ok(())
     })?;
 
+    create_match(&mod_path, all_models)?;
+
+    Ok(())
+}
+
+fn create_match(mod_path: &PathBuf, all_models: Vec<ModelGroup>) -> Result<()> {
+    let mut mod_file = fs::OpenOptions::new()
+        .append(true)
+        .create(true)
+        .open(mod_path)?;
+
+
+    writeln!(mod_file)?;
+    writeln!(mod_file, "fn control_table(model: &crate::models::Model) -> crate::ControlTable {{")?;
+    writeln!(mod_file, "    use crate::models::Model::*;")?;
+    writeln!(mod_file, "    let table = match model {{")?;
+    for group in &all_models {
+        writeln!(mod_file, "        {} => {}::{}::table(),",
+                 group.model.iter().map(|m| m.to_string()).join(" | "),
+                 group.file_name(),
+                 group.table_name(),
+        )?;
+    }
+    writeln!(mod_file, "        _ => panic!(),")?;
+    writeln!(mod_file, "    }};")?;
+    writeln!(mod_file, "    crate::ControlTable {{")?;
+    writeln!(mod_file, "        model: *model,")?;
+    writeln!(mod_file, "        table,")?;
+    writeln!(mod_file, "    }}")?;
+    writeln!(mod_file, "}}")?;
     Ok(())
 }
 
@@ -106,7 +164,7 @@ fn clone_emanual() -> Result<()> {
 
 fn collect_model_files(
     dir: impl AsRef<str>,
-) -> impl Iterator<Item = Result<PathBuf, walkdir::Error>> {
+) -> impl Iterator<Item=Result<PathBuf, walkdir::Error>> {
     let r = walkdir::WalkDir::new(dir.as_ref())
         .min_depth(1)
         .into_iter()
@@ -164,7 +222,7 @@ impl ControlTableRow {
         let data_name = find("data").unwrap();
         let access = find("access").unwrap();
         let initial_value = find("initial").unwrap();
-        let range = find("range").unwrap();
+        let range = find("range").unwrap().replace("<br>", " ").replace(",", "");
         let unit = find("unit").unwrap();
         let area = find("area")
             .or_else(|| area.map(|s| s.to_string()))
@@ -194,14 +252,14 @@ impl ControlTableRow {
         let initial_value = (initial_value.is_empty()
             || initial_value.contains("-")
             || initial_value.contains("br"))
-        .not()
-        .then(|| {
-            let initial_value = initial_value.replace(",", "");
-            initial_value
-                .parse()
-                .with_context(|| anyhow!("failed to parse initial value: {}", initial_value))
-        })
-        .transpose()?;
+            .not()
+            .then(|| {
+                let initial_value = initial_value.replace(",", "");
+                initial_value
+                    .parse()
+                    .with_context(|| anyhow!("failed to parse initial value: {}", initial_value))
+            })
+            .transpose()?;
         // println!("parsed {}", data_name);
         Ok(Some(Self {
             address: address
@@ -232,10 +290,10 @@ struct Model {
     name: String,
     model: dynamixel_ct::models::Model,
     model_number: u16,
-    table: BTreeSet<ControlTableRow>,
+    table: BTreeMap<Register, ControlTableRow>,
 }
 
-fn to_model_macro(name: String, table: BTreeSet<ControlTableRow>) -> String {
+fn to_model_macro(name: String, table: BTreeMap<Register, ControlTableRow>) -> String {
     let mut output = format!(
         "//! Dynamixel XM430 model definitions.\n\
             \n\
@@ -245,7 +303,7 @@ fn to_model_macro(name: String, table: BTreeSet<ControlTableRow>) -> String {
         name.to_case(Case::Pascal),
     );
 
-    for eeprom in table {
+    for (_, eeprom) in table {
         output.push_str(&format!("\t{}", &eeprom.to_macro_line()));
     }
 
@@ -258,36 +316,33 @@ fn to_model_macro(name: String, table: BTreeSet<ControlTableRow>) -> String {
 }
 
 fn to_model_macro_from_group(
-    name: String,
-    models: Vec<DModel>,
-    table: BTreeSet<ControlTableRow>,
-) -> String {
-    let model_string = models.iter().map(|m| format!("Model::{}", m)).join(", ");
+    file: &mut File,
+    ModelGroup { name, alias, model, table }: ModelGroup,
+) -> Result<()> {
+    let model_string = model.iter().map(|m| format!("Model::{}", m)).join(", ");
 
-    let mut output = format!(
-        "//! Dynamixel XM430 model definitions.\n\
-            \n\
-            use crate::model;\n\
-            use crate::models::Model;\n\
 
-            const MODELS: [Model; {}] = [{}];\n\
+    writeln!(file, "//! Dynamixel XM430 model definitions.")?;
+    writeln!(file)?;
+    writeln!(file, "use crate::model;")?;
+    writeln!(file, "use crate::models::Model;")?;
+    writeln!(file)?;
 
-            model![{} {{\n",
-        models.len(),
-        model_string,
-        name.to_case(Case::Pascal),
-    );
+    writeln!(file, "const MODELS: [Model; {}] = [{}];", model.len(), model_string)?;
+    writeln!(file)?;
+    for a in alias {
+        writeln!(file, "pub type {} = {};", a, name)?;
+    }
+    writeln!(file, "")?;
+    writeln!(file)?;
+    writeln!(file, "model![{} {{", name.to_uppercase())?;
 
-    for eeprom in table {
-        output.push_str(&format!("\t{}", &eeprom.to_macro_line()));
+    for (_, eeprom) in table {
+        writeln!(file, "    {}", &eeprom.to_macro_line())?;
     }
 
-    output.push_str(
-        "}\
-        ];\
-        ",
-    );
-    output
+    writeln!(file, "}}];")?;
+    Ok(())
 }
 
 fn parse_table(model_file: impl AsRef<Path>) -> Result<Model> {
@@ -301,7 +356,7 @@ fn parse_table(model_file: impl AsRef<Path>) -> Result<Model> {
 
     let parse_table = |start: &str,
                        area: Option<&str>|
-     -> anyhow::Result<BTreeSet<ControlTableRow>> {
+                       -> anyhow::Result<BTreeMap<Register, ControlTableRow>> {
         let (start, _) = file
             .lines()
             .find_position(|p| p.to_lowercase().contains(&start.to_lowercase()))
@@ -321,12 +376,14 @@ fn parse_table(model_file: impl AsRef<Path>) -> Result<Model> {
                 ControlTableRow::parse(header, r, area)
                     .with_context(|| anyhow!("failed to parse row {}", r))
                     .transpose()
-            })
+            }).map(|table| {
+            table.map(|t| (t.data_name, t))
+        })
             .try_collect()
     };
 
     let try_double_table =
-        || -> anyhow::Result<(BTreeSet<ControlTableRow>, BTreeSet<ControlTableRow>)> {
+        || -> anyhow::Result<(BTreeMap<Register, ControlTableRow>, BTreeMap<Register, ControlTableRow>)> {
             let eeprom = parse_table("Control Table of EEPROM Area", Some("EEPROM"))?;
 
             let ram = parse_table("Control Table of RAM Area", Some("RAM"))?;
@@ -343,9 +400,9 @@ fn parse_table(model_file: impl AsRef<Path>) -> Result<Model> {
         }
     };
 
-    let model_number = table
+    let (_, model_number) = table
         .iter()
-        .find(|t| t.data_name == Register::ModelNumber)
+        .find(|(r, _)| r == &&Register::ModelNumber)
         .expect("can't find modelNumber");
     let model_number = model_number
         .initial_value
@@ -417,10 +474,10 @@ fn write_file_model_group(
         .open(file_path)?;
     println!(
         "writing model {} to file {}",
-        model.name,
+        model.table_name(),
         file_path.display()
     );
-    file.write_all(to_model_macro_from_group(model.name, model.model, model.table).as_bytes())?;
+    to_model_macro_from_group(&mut file, model)?;
 
     let mod_path = mod_path.as_ref();
 
@@ -431,7 +488,7 @@ fn write_file_model_group(
         .create(true)
         .open(mod_path)?;
     let file_name = file_path.file_stem().unwrap().to_str().unwrap();
-    mod_file.write_all(format!("mod {};\n", file_name).as_bytes())?;
+    writeln!(mod_file, "mod {};\n", file_name)?;
 
     Ok(())
 }
