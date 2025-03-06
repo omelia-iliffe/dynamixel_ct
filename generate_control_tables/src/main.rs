@@ -15,14 +15,13 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str::FromStr;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 struct ModelGroup {
     name: String,
-    alias: BTreeSet<String>,
+    alias: BTreeMap<String, Vec<DModel>>,
     model: BTreeSet<DModel>,
     table: BTreeMap<Register, ControlTableRow>,
 }
-
 
 impl ModelGroup {
     fn table_name(&self) -> String {
@@ -33,9 +32,11 @@ impl ModelGroup {
         self.name.to_lowercase()
     }
     fn calc_alias(&mut self) {
-        self.alias = self.model.iter().flat_map(|model| {
-            Some(model.to_string().split("_").nth(0)?.to_string())
-        }).collect();
+        self.alias = self.model.iter().fold(BTreeMap::new(), |mut acc, model| {
+            let alias = model.to_string().split("_").nth(0).unwrap().to_string();
+            acc.entry(alias).or_default().push(model.clone());
+            acc
+        });
     }
 }
 
@@ -74,9 +75,9 @@ fn main() -> Result<()> {
             model.insert(m.model);
             all_models.push(ModelGroup {
                 name: m.name.clone(),
-                alias: BTreeSet::new(),
                 model,
                 table: m.table.clone(),
+                ..Default::default()
             })
         }
     }
@@ -87,15 +88,26 @@ fn main() -> Result<()> {
 
     println!("total model groups {}", all_models.len());
 
+    all_models.iter_mut().for_each(|mg| {
+        mg.name = match mg.file_name().as_str() {
+            "xh540_w270" => "xdh540".to_string(),
+            "xc430_w150" => "xcl430".to_string(),
+            "xw540_t140" => "xw".to_string(),
+            "xl330_m288" => "xcl330".to_string(),
+            "xd430_t350" => "xdhm430".to_string(),
+            "ym080_230_a051_rh" => "ym".to_string(),
+            "pm54_060_s250_r" => "p".to_string(),
+            a => panic!("file name order has changed. {a} not recognised"),
+        };
+        mg.calc_alias()
+    });
     let generate_path: PathBuf = "src/models/generated/".into();
-    fs::remove_dir_all(&generate_path)?;
+    fs::remove_dir_all(&generate_path).ok();
     let mod_path = generate_path.join("mod.rs");
 
     if fs::exists(&mod_path)? {
         fs::remove_file(&mod_path)?;
     }
-
-    all_models.iter_mut().for_each(|mg| mg.calc_alias());
 
     all_models.clone().into_iter().try_for_each(|model| {
         let path = generate_path.join(format!("{}.rs", model.file_name()));
@@ -115,23 +127,20 @@ fn create_match(mod_path: &PathBuf, all_models: Vec<ModelGroup>) -> Result<()> {
         .create(true)
         .open(mod_path)?;
 
-
     writeln!(mod_file)?;
-    writeln!(mod_file, "fn control_table(model: &crate::models::Model) -> crate::ControlTable {{")?;
+    writeln!(mod_file, "pub(crate) fn control_table(model: &crate::models::Model) -> &'static std::collections::HashMap<crate::Register, crate::RegisterData> {{")?;
     writeln!(mod_file, "    use crate::models::Model::*;")?;
-    writeln!(mod_file, "    let table = match model {{")?;
+    writeln!(mod_file, "    match model {{")?;
     for group in &all_models {
-        writeln!(mod_file, "        {} => {}::{}::table(),",
-                 group.model.iter().map(|m| m.to_string()).join(" | "),
-                 group.file_name(),
-                 group.table_name(),
-        )?;
+        for (alias, models) in &group.alias {
+            writeln!(
+                mod_file,
+                "        {} => {}::table(),",
+                models.iter().map(|m| m.to_string()).join(" | "),
+                alias,
+            )?;
+        }
     }
-    writeln!(mod_file, "        _ => panic!(),")?;
-    writeln!(mod_file, "    }};")?;
-    writeln!(mod_file, "    crate::ControlTable {{")?;
-    writeln!(mod_file, "        model: *model,")?;
-    writeln!(mod_file, "        table,")?;
     writeln!(mod_file, "    }}")?;
     writeln!(mod_file, "}}")?;
     Ok(())
@@ -164,7 +173,7 @@ fn clone_emanual() -> Result<()> {
 
 fn collect_model_files(
     dir: impl AsRef<str>,
-) -> impl Iterator<Item=Result<PathBuf, walkdir::Error>> {
+) -> impl Iterator<Item = Result<PathBuf, walkdir::Error>> {
     let r = walkdir::WalkDir::new(dir.as_ref())
         .min_depth(1)
         .into_iter()
@@ -252,14 +261,14 @@ impl ControlTableRow {
         let initial_value = (initial_value.is_empty()
             || initial_value.contains("-")
             || initial_value.contains("br"))
-            .not()
-            .then(|| {
-                let initial_value = initial_value.replace(",", "");
-                initial_value
-                    .parse()
-                    .with_context(|| anyhow!("failed to parse initial value: {}", initial_value))
-            })
-            .transpose()?;
+        .not()
+        .then(|| {
+            let initial_value = initial_value.replace(",", "");
+            initial_value
+                .parse()
+                .with_context(|| anyhow!("failed to parse initial value: {}", initial_value))
+        })
+        .transpose()?;
         // println!("parsed {}", data_name);
         Ok(Some(Self {
             address: address
@@ -276,13 +285,6 @@ impl ControlTableRow {
             area,
         }))
     }
-
-    fn to_macro_line(self) -> String {
-        format!(
-            "{}: {}, {},\n",
-            self.data_name, self.address, self.size,
-        )
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -293,52 +295,21 @@ struct Model {
     table: BTreeMap<Register, ControlTableRow>,
 }
 
-fn to_model_macro(name: String, table: BTreeMap<Register, ControlTableRow>) -> String {
-    let mut output = format!(
-        "//! Dynamixel XM430 model definitions.\n\
-            \n\
-            use crate::model;\n\
-            \n\
-            model![{} {{\n",
-        name.to_case(Case::Pascal),
-    );
-
-    for (_, eeprom) in table {
-        output.push_str(&format!("\t{}", &eeprom.to_macro_line()));
-    }
-
-    output.push_str(
-        "}\
-        ];\
-        ",
-    );
-    output
-}
-
-fn to_model_macro_from_group(
-    file: &mut File,
-    ModelGroup { name, alias, model, table }: ModelGroup,
-) -> Result<()> {
-    let model_string = model.iter().map(|m| format!("Model::{}", m)).join(", ");
-
-
+fn to_model_macro_from_group(file: &mut File, model_group: &ModelGroup) -> Result<()> {
     writeln!(file, "//! Dynamixel XM430 model definitions.")?;
     writeln!(file)?;
     writeln!(file, "use crate::model;")?;
-    writeln!(file, "use crate::models::Model;")?;
     writeln!(file)?;
 
-    writeln!(file, "const MODELS: [Model; {}] = [{}];", model.len(), model_string)?;
     writeln!(file)?;
-    for a in alias {
-        writeln!(file, "pub type {} = {};", a, name)?;
-    }
-    writeln!(file, "")?;
-    writeln!(file)?;
-    writeln!(file, "model![{} {{", name.to_uppercase())?;
+    writeln!(file, "model![{} {{", model_group.alias.keys().join(" "))?;
 
-    for (_, eeprom) in table {
-        writeln!(file, "    {}", &eeprom.to_macro_line())?;
+    for (_, row) in &model_group.table {
+        writeln!(
+            file,
+            "{}: {}, {},",
+            row.data_name, row.address, row.size,
+        )?;
     }
 
     writeln!(file, "}}];")?;
@@ -356,7 +327,7 @@ fn parse_table(model_file: impl AsRef<Path>) -> Result<Model> {
 
     let parse_table = |start: &str,
                        area: Option<&str>|
-                       -> anyhow::Result<BTreeMap<Register, ControlTableRow>> {
+     -> anyhow::Result<BTreeMap<Register, ControlTableRow>> {
         let (start, _) = file
             .lines()
             .find_position(|p| p.to_lowercase().contains(&start.to_lowercase()))
@@ -376,9 +347,8 @@ fn parse_table(model_file: impl AsRef<Path>) -> Result<Model> {
                 ControlTableRow::parse(header, r, area)
                     .with_context(|| anyhow!("failed to parse row {}", r))
                     .transpose()
-            }).map(|table| {
-            table.map(|t| (t.data_name, t))
-        })
+            })
+            .map(|table| table.map(|t| (t.data_name, t)))
             .try_collect()
     };
 
@@ -429,36 +399,6 @@ fn parse_table(model_file: impl AsRef<Path>) -> Result<Model> {
     Ok(model)
 }
 
-fn write_file(mod_path: impl AsRef<Path>, file_path: impl AsRef<Path>, model: Model) -> Result<()> {
-    let file_path = file_path.as_ref();
-    let folder = file_path.parent().unwrap();
-    fs::create_dir_all(folder)?;
-    let mut file = fs::OpenOptions::new()
-        .write(true)
-        .create(true)
-        .truncate(true)
-        .open(file_path)?;
-    println!(
-        "writing model {} to file {}",
-        model.name,
-        file_path.display()
-    );
-    file.write_all(to_model_macro(model.name, model.table).as_bytes())?;
-
-    let mod_path = mod_path.as_ref();
-
-    let folder = mod_path.parent().unwrap();
-    fs::create_dir_all(folder)?;
-    let mut mod_file = fs::OpenOptions::new()
-        .append(true)
-        .create(true)
-        .open(mod_path)?;
-    let file_name = file_path.file_stem().unwrap().to_str().unwrap();
-    mod_file.write_all(format!("mod {};\n", file_name).as_bytes())?;
-
-    Ok(())
-}
-
 fn write_file_model_group(
     mod_path: impl AsRef<Path>,
     file_path: impl AsRef<Path>,
@@ -477,7 +417,7 @@ fn write_file_model_group(
         model.table_name(),
         file_path.display()
     );
-    to_model_macro_from_group(&mut file, model)?;
+    to_model_macro_from_group(&mut file, &model)?;
 
     let mod_path = mod_path.as_ref();
 
@@ -487,8 +427,8 @@ fn write_file_model_group(
         .append(true)
         .create(true)
         .open(mod_path)?;
-    let file_name = file_path.file_stem().unwrap().to_str().unwrap();
-    writeln!(mod_file, "mod {};\n", file_name)?;
+    writeln!(mod_file, "mod {};", model.file_name())?;
+    writeln!(mod_file, "pub use {}::*;", model.file_name())?;
 
     Ok(())
 }
