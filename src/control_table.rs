@@ -62,6 +62,7 @@ impl TryFrom<Model> for ControlTable {
 
 #[cfg(test)]
 mod tests {
+    use crate::models::{XM430, YM070};
     use super::*;
     #[test]
     fn xm430() {
@@ -93,7 +94,7 @@ mod tests {
 
         for model in models {
             let table = ControlTable::new(model).unwrap();
-            assert_eq!(table.table, YM::table());
+            assert_eq!(table.table, YM070::table());
         }
     }
 }

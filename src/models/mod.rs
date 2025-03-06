@@ -1,12 +1,7 @@
 //! Dynamixel model implementations
 //! Each model is defined in its own module.
-mod xm430;
-
-pub use xm430::XM430;
-mod ym;
 mod generated;
-
-pub use ym::YM;
+pub use generated::*;
 
 /// Errors that can occur when creating a model from a model number.
 #[derive(Debug, PartialEq, derive_more::Display, derive_more::Error)]
@@ -17,6 +12,8 @@ pub enum Error {
     NotImplemented,
 }
 
+#[cfg(feature = "serde")]
+use core::str::FromStr;
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::{FromPrimitive, ToPrimitive};
 #[cfg(feature = "serde")]
@@ -25,11 +22,11 @@ use serde::{de, Deserialize, Deserializer};
 use serde_repr::Serialize_repr;
 #[cfg(feature = "serde")]
 use strum::EnumString;
-#[cfg(feature = "serde")]
-use core::str::FromStr;
 
 /// Dynamixel model names and numbers
-#[derive(PartialEq, Eq, Clone, Copy, FromPrimitive, ToPrimitive, derive_more::Display, Ord, PartialOrd)]
+#[derive(
+    PartialEq, Eq, Clone, Copy, FromPrimitive, ToPrimitive, derive_more::Display, Ord, PartialOrd,
+)]
 #[repr(u16)]
 #[allow(non_camel_case_types)]
 #[allow(missing_docs)]
@@ -96,6 +93,25 @@ pub enum Model {
     YM080_230_R099_RH = 4150,
     YM080_230_A051_RH = 4160,
     YM080_230_A099_RH = 4170,
+}
+
+pub enum ModelGroup {
+    XD540,
+    XH540,
+    XM540,
+    XC430,
+    XW540,
+    XC330,
+    XL330,
+    XD430,
+    XH430,
+    XM430,
+    YM070,
+    YM080,
+    PH42,
+    PH54,
+    PM42,
+    PM54,
 }
 
 #[cfg(feature = "serde")]
@@ -183,10 +199,10 @@ mod tests {
     fn test_serde_toml() {
         #[derive(Deserialize, serde::Serialize)]
         struct Test {
-            model: Model
+            model: Model,
         }
         let model = Test {
-            model: Model::XM430_W210
+            model: Model::XM430_W210,
         };
         let toml = toml::to_string(&model).unwrap();
         assert_eq!(toml, "model = 1030\n");
@@ -194,7 +210,7 @@ mod tests {
         let model: Test = toml::from_str("model = \"XM430_W350\"").unwrap();
         assert_eq!(model.model, Model::XM430_W350);
 
-        let model: Test =toml::from_str("model = 1020").unwrap();
+        let model: Test = toml::from_str("model = 1020").unwrap();
         assert_eq!(model.model, Model::XM430_W350);
     }
 }
