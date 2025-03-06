@@ -101,7 +101,7 @@ fn main() -> Result<()> {
         };
         mg.calc_alias()
     });
-    let generate_path: PathBuf = "src/models/generated/".into();
+    let generate_path: PathBuf = "crates/dynamixel_ct/src/models/generated/".into();
     fs::remove_dir_all(&generate_path).ok();
     let mod_path = generate_path.join("mod.rs");
 
@@ -195,10 +195,20 @@ struct ControlTableRow {
 
 impl PartialEq for ControlTableRow {
     fn eq(&self, other: &Self) -> bool {
-        self.address == other.address
+        let base = self.address == other.address
             && self.size == other.size
             && self.data_name == other.data_name
-            && self.access == other.access
+            && self.access == other.access;
+        base
+        //
+        // if self.data_name != Register::ModelNumber {
+        //     if self.range != other.range {
+        //         println!("{} - {:?} != {} - {:?}", self.data_name, self.range, other.data_name, other.range);
+        //     }
+        //     base && self.range == other.range
+        // } else {
+        //     base
+        // }
     }
 }
 
