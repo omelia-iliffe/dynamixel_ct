@@ -13,6 +13,7 @@ pub use ym070_ym080::*;
 mod ph42_ph54_pm42_pm54;
 pub use ph42_ph54_pm42_pm54::*;
 
+#[expect(unused)]
 pub(crate) fn control_table_from_model(model: &dynamixel_registers::models::Model) -> &'static std::collections::HashMap<dynamixel_registers::Register, dynamixel_registers::RegisterData> {
     use dynamixel_registers::models::Model::*;
     match model {
