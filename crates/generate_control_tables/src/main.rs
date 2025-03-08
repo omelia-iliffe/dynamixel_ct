@@ -200,15 +200,6 @@ impl PartialEq for ControlTableRow {
             && self.size == other.size
             && self.data_name == other.data_name
             && self.access == other.access
-        //
-        // if self.data_name != Register::ModelNumber {
-        //     if self.range != other.range {
-        //         println!("{} - {:?} != {} - {:?}", self.data_name, self.range, other.data_name, other.range);
-        //     }
-        //     base && self.range == other.range
-        // } else {
-        //     base
-        // }
     }
 }
 

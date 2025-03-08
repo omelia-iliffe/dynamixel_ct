@@ -12,3 +12,7 @@ serde_repr = {version = "0.1.20", optional = true}
 strum = {version = "0.27.1", features = ["strum_macros", "derive"], optional = true}
 [features]
 serde = ["dep:serde", "serde_repr", "strum"]
+
+[dev-dependencies]
+serde_json = "1.0.132"
+toml = "0.8.19"
