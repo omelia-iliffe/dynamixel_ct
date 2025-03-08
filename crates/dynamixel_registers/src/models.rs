@@ -4,6 +4,54 @@ use num_traits::{FromPrimitive, ToPrimitive};
 #[cfg(feature = "serde")]
 use std::str::FromStr;
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy, derive_more::Display, Ord, PartialOrd)]
+#[repr(u16)]
+#[allow(non_camel_case_types)]
+#[allow(missing_docs)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Deserialize, serde::Serialize)
+)]
+#[cfg_attr(feature = "serde", serde(untagged))]
+pub enum ModelOrModelGroup {
+    Model(Model),
+    ModelGroup(ModelGroup),
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy, derive_more::Display, Ord, PartialOrd)]
+#[repr(u16)]
+#[allow(non_camel_case_types)]
+#[allow(missing_docs)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Deserialize, serde::Serialize, strum::EnumString)
+)]
+pub enum ModelGroup {
+    PH42,
+    PH54,
+    PM42,
+    PM54,
+    XC330,
+    XC430,
+    XD430,
+    XD540,
+    XH430,
+    XH540,
+    XL330,
+    XL430,
+    XM430,
+    XM540,
+    XW540,
+    YM070,
+    YM080,
+}
+
+impl From<Model> for ModelGroup {
+    fn from(model: Model) -> Self {
+        model.model_group()
+    }
+}
+
 /// Dynamixel model names and numbers
 #[derive(
     PartialEq,
@@ -88,40 +136,29 @@ pub enum Model {
 }
 
 impl Model {
-    #[cfg(feature = "serde")]
     pub fn model_group(&self) -> ModelGroup {
-        let s = self.to_string();
-        let s = s.split("_").next().expect("All Models contain an _");
-        ModelGroup::from_str(s).unwrap_or_else(|e| panic!("All Models groups first section maps to a ModelGroup, {e}, {self}"))
-    }
-}
+        use Model::*;
+        match self {
+            XD540_T270 | XD540_T150 => ModelGroup::XD540,
+            XH540_W270 | XH540_W150 | XH540_V270 | XH540_V150 => ModelGroup::XH540,
+            XM540_W270 | XM540_W150 => ModelGroup::XM540,
+            XC430_W150 | XC430_W240 => ModelGroup::XC430,
+            XL430_W250 => ModelGroup::XL430,
+            XW540_T260 | XW540_T140 | XW540_H260 => ModelGroup::XW540,
+            XC330_T181 | XC330_T288 | XC330_M181 | XC330_M288 => ModelGroup::XC330,
+            XL330_M077 | XL330_M288 => ModelGroup::XL330,
+            XD430_T350 | XD430_T210 => ModelGroup::XD430,
+            XH430_W350 | XH430_W210 | XH430_V350 | XH430_V210 => ModelGroup::XH430,
+            XM430_W350 | XM430_W210 => ModelGroup::XM430,
+            YM070_210_M001_RH | YM070_210_B001_RH | YM070_200_R051_RH | YM070_200_R099_RH | YM070_210_A051_RH | YM070_200_A099_RH => ModelGroup::YM070,
+            YM080_230_M001_RH | YM080_230_B001_RH | YM080_230_R051_RH | YM080_230_R099_RH | YM080_230_A051_RH | YM080_230_A099_RH => ModelGroup::YM080,
+            PH42_020_S300_R =>ModelGroup:: PH42,
+            PH54_100_S500_R | PH54_200_S500_R =>ModelGroup:: PH54,
+            PM42_010_S260_R =>ModelGroup:: PM42,
+            PM54_040_S250_R | PM54_060_S250_R =>ModelGroup:: PM54,
+        }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, derive_more::Display, Ord, PartialOrd)]
-#[repr(u16)]
-#[allow(non_camel_case_types)]
-#[allow(missing_docs)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde::Deserialize, serde::Serialize, strum::EnumString)
-)]
-pub enum ModelGroup {
-    PH42,
-    PH54,
-    PM42,
-    PM54,
-    XC330,
-    XC430,
-    XD430,
-    XD540,
-    XH430,
-    XH540,
-    XL330,
-    XL430,
-    XM430,
-    XM540,
-    XW540,
-    YM070,
-    YM080,
+    }
 }
 
 #[cfg(feature = "serde")]
