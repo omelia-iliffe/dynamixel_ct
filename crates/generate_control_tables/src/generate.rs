@@ -12,15 +12,31 @@ pub fn create_match(mod_path: &PathBuf, all_models: Vec<ModelGroup>) -> anyhow::
         .open(mod_path)?;
 
     writeln!(mod_file)?;
-    writeln!(mod_file, "pub(crate) fn control_table(model: &crate::models::Model) -> &'static std::collections::HashMap<crate::Register, crate::RegisterData> {{")?;
-    writeln!(mod_file, "    use crate::models::Model::*;")?;
+    writeln!(mod_file, "pub(crate) fn control_table_from_model(model: &dynamixel_registers::models::Model) -> &'static std::collections::HashMap<dynamixel_registers::Register, dynamixel_registers::RegisterData> {{")?;
+    writeln!(mod_file, "    use dynamixel_registers::models::Model::*;")?;
     writeln!(mod_file, "    match model {{")?;
     for group in &all_models {
-        for (alias, models) in &group.alias {
+        for (alias, models) in group.alias() {
             writeln!(
                 mod_file,
                 "        {} => {}::table(),",
                 models.iter().map(|m| m.to_string()).join(" | "),
+                alias,
+            )?;
+        }
+    }
+    writeln!(mod_file, "    }}")?;
+    writeln!(mod_file, "}}")?;
+    writeln!(mod_file)?;
+    writeln!(mod_file, "pub(crate) fn control_table_from_model_group(model_group: &dynamixel_registers::models::ModelGroup) -> &'static std::collections::HashMap<dynamixel_registers::Register, dynamixel_registers::RegisterData> {{")?;
+    writeln!(mod_file, "    use dynamixel_registers::models::ModelGroup;")?;
+    writeln!(mod_file, "    match model_group {{")?;
+    for group in &all_models {
+        for alias in group.alias().keys() {
+            writeln!(
+                mod_file,
+                "        ModelGroup::{} => {}::table(),",
+                alias,
                 alias,
             )?;
         }
@@ -37,12 +53,12 @@ fn to_model_macro_from_group(file: &mut File, model_group: &ModelGroup) -> anyho
     writeln!(file)?;
 
     writeln!(file)?;
-    writeln!(file, "model![{} {{", model_group.alias.keys().join(" "))?;
+    writeln!(file, "model![{} {{", model_group.alias().keys().join(" "))?;
 
-    for row in model_group.table.values() {
+    for row in model_group.table().values() {
         writeln!(
             file,
-            "{}: {}, {},",
+            "   {}: {}, {},",
             row.data_name, row.address, row.size,
         )?;
     }

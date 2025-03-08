@@ -3,7 +3,6 @@ mod generate;
 
 use anyhow::{anyhow, Context, Result};
 use itertools::Itertools;
-use std::collections::BTreeSet;
 use std::fs;
 use std::ops::Not;
 use std::path::{Path, PathBuf};
@@ -34,44 +33,26 @@ fn main() -> Result<()> {
 
     let mut all_models: Vec<ModelGroup> = Vec::new();
 
-    for m in &models {
+    for m in models {
         if let Some(mg) = all_models.iter_mut().find(|mg| {
-            println!("comparing {} with {}", mg.name, m.model);
-            mg.table == m.table
+            println!("comparing {} with {}", mg.name(), m.model);
+            mg.table() == &m.table
         }) {
-            mg.model.insert(m.model);
+            mg.insert_model(m.model);
         } else {
-            let mut model = BTreeSet::new();
-            model.insert(m.model);
-            all_models.push(ModelGroup {
-                name: m.name.clone(),
-                model,
-                table: m.table.clone(),
-                ..Default::default()
-            })
+            let mut mg = ModelGroup::new(m.table);
+            mg.insert_model(m.model);
+            all_models.push(mg);
         }
     }
 
     for mg in &all_models {
-        println!("model_group: {:?}", mg.model);
+        println!("model_group: {:?}", mg.name());
     }
 
     println!("total model groups {}", all_models.len());
 
-    all_models.iter_mut().for_each(|mg| {
-        mg.name = match mg.file_name().as_str() {
-            "xh540_w270" => "xdh540".to_string(),
-            "xc430_w150" => "xcl430".to_string(),
-            "xw540_t140" => "xw".to_string(),
-            "xl330_m288" => "xcl330".to_string(),
-            "xd430_t350" => "xdhm430".to_string(),
-            "ym080_230_a051_rh" => "ym".to_string(),
-            "pm54_060_s250_r" => "p".to_string(),
-            a => panic!("file name order has changed. {a} not recognised"),
-        };
-        mg.calc_alias()
-    });
-    let generate_path: PathBuf = "crates/dynamixel_ct/src/models/generated/".into();
+    let generate_path: PathBuf = "crates/dynamixel_ct/src/models/".into();
     fs::remove_dir_all(&generate_path).ok();
     let mod_path = generate_path.join("mod.rs");
 

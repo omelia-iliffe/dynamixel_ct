@@ -6,6 +6,7 @@ use convert_case::{Case, Casing};
 use std::path::Path;
 use std::fs;
 use dynamixel_registers::models::Model as DModel;
+use dynamixel_registers::models::ModelGroup as DModelGroup;
 use std::cmp::Ordering;
 use itertools::Itertools;
 use std::ops::Not;
@@ -14,26 +15,43 @@ use num_traits::FromPrimitive;
 
 #[derive(Debug, Clone, Default)]
 pub struct ModelGroup {
-    pub(crate) name: String,
-    pub(crate) alias: BTreeMap<String, Vec<DModel>>,
-    pub(crate) model: BTreeSet<DModel>,
-    pub(crate) table: BTreeMap<Register, ControlTableRow>,
+    model: BTreeSet<DModel>,
+    table: BTreeMap<Register, ControlTableRow>,
 }
 
 impl ModelGroup {
+    pub(crate) fn new(table: BTreeMap<Register, ControlTableRow>) -> Self {
+        Self {
+            table,
+            ..Default::default()
+        }
+    }
+
+    pub(crate) fn insert_model(&mut self, model: DModel) {
+        self.model.insert(model);
+    }
+
+    pub(crate) fn name(&self) -> String {
+        self.alias().keys().join("_")
+    }
+
+    pub(crate) fn table(&self) -> &BTreeMap<Register, ControlTableRow> {
+        &self.table
+    }
     pub(crate) fn table_name(&self) -> String {
-        self.name.to_uppercase()
+        self.name().to_uppercase()
     }
 
     pub(crate) fn file_name(&self) -> String {
-        self.name.to_lowercase()
+        self.name().to_lowercase()
     }
-    pub(crate) fn calc_alias(&mut self) {
-        self.alias = self.model.iter().fold(BTreeMap::new(), |mut acc, model| {
-            let alias = model.to_string().split("_").nth(0).unwrap().to_string();
+
+    pub(crate) fn alias(&self) -> BTreeMap<DModelGroup, Vec<DModel>> {
+        self.model.iter().fold(BTreeMap::new(), |mut acc, model| {
+            let alias = model.model_group();
             acc.entry(alias).or_default().push(*model);
             acc
-        });
+        })
     }
 }
 
@@ -152,7 +170,6 @@ impl ControlTableRow {
 
 #[derive(Debug, Clone)]
 pub(crate) struct Model {
-    pub(crate) name: String,
     pub(crate) model: dynamixel_registers::models::Model,
     pub(crate) table: BTreeMap<Register, ControlTableRow>,
 }
@@ -231,7 +248,6 @@ pub fn parse_table(model_file: impl AsRef<Path>) -> anyhow::Result<Model> {
             .ok_or_else(|| anyhow!("cannot find model for {} = {},", name, model_number))?,
     );
     let model = Model {
-        name,
         model,
         table,
     };
