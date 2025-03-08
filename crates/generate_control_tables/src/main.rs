@@ -1,47 +1,17 @@
+mod parse;
+mod generate;
+
 use anyhow::{anyhow, Context, Result};
-use convert_case::{Case, Casing};
-use dynamixel_registers::models::Model as DModel;
-use dynamixel_registers::Register;
 use itertools::Itertools;
-use num_traits::FromPrimitive;
-use regex::Regex;
-use std::cmp::Ordering;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 use std::fs;
-use std::fs::File;
-use std::io::Write;
 use std::ops::Not;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::str::FromStr;
-
-#[derive(Debug, Clone, Default)]
-struct ModelGroup {
-    name: String,
-    alias: BTreeMap<String, Vec<DModel>>,
-    model: BTreeSet<DModel>,
-    table: BTreeMap<Register, ControlTableRow>,
-}
-
-impl ModelGroup {
-    fn table_name(&self) -> String {
-        self.name.to_uppercase()
-    }
-
-    fn file_name(&self) -> String {
-        self.name.to_lowercase()
-    }
-    fn calc_alias(&mut self) {
-        self.alias = self.model.iter().fold(BTreeMap::new(), |mut acc, model| {
-            let alias = model.to_string().split("_").nth(0).unwrap().to_string();
-            acc.entry(alias).or_default().push(*model);
-            acc
-        });
-    }
-}
+use parse::ModelGroup;
 
 fn main() -> Result<()> {
-    if std::path::Path::new("emanual").exists().not() {
+    if Path::new("emanual").exists().not() {
         clone_emanual()?
     }
 
@@ -58,7 +28,7 @@ fn main() -> Result<()> {
         .filter(|f| filter_files(f))
         .map(|file| {
             println!("parsing table {}", file.display());
-            parse_table(file).with_context(|| anyhow!("error parsing {:?}", file))
+            parse::parse_table(file).with_context(|| anyhow!("error parsing {:?}", file))
         })
         .try_collect()?;
 
@@ -112,37 +82,12 @@ fn main() -> Result<()> {
     all_models.clone().into_iter().try_for_each(|model| {
         let path = generate_path.join(format!("{}.rs", model.file_name()));
 
-        write_file_model_group(&mod_path, &path, model)?;
+        generate::write_file_model_group(&mod_path, &path, model)?;
         anyhow::Ok(())
     })?;
 
-    create_match(&mod_path, all_models)?;
+    generate::create_match(&mod_path, all_models)?;
 
-    Ok(())
-}
-
-fn create_match(mod_path: &PathBuf, all_models: Vec<ModelGroup>) -> Result<()> {
-    let mut mod_file = fs::OpenOptions::new()
-        .append(true)
-        .create(true)
-        .open(mod_path)?;
-
-    writeln!(mod_file)?;
-    writeln!(mod_file, "pub(crate) fn control_table(model: &crate::models::Model) -> &'static std::collections::HashMap<crate::Register, crate::RegisterData> {{")?;
-    writeln!(mod_file, "    use crate::models::Model::*;")?;
-    writeln!(mod_file, "    match model {{")?;
-    for group in &all_models {
-        for (alias, models) in &group.alias {
-            writeln!(
-                mod_file,
-                "        {} => {}::table(),",
-                models.iter().map(|m| m.to_string()).join(" | "),
-                alias,
-            )?;
-        }
-    }
-    writeln!(mod_file, "    }}")?;
-    writeln!(mod_file, "}}")?;
     Ok(())
 }
 
@@ -181,259 +126,3 @@ fn collect_model_files(
     r
 }
 
-#[derive(Debug, Clone, Eq)]
-#[expect(dead_code)]
-struct ControlTableRow {
-    address: u16,
-    size: u16,
-    data_name: Register,
-    access: String,
-    initial_value: Option<i32>,
-    range: String,
-    unit: String,
-    area: String,
-}
-
-impl PartialEq for ControlTableRow {
-    fn eq(&self, other: &Self) -> bool {
-        self.address == other.address
-            && self.size == other.size
-            && self.data_name == other.data_name
-            && self.access == other.access
-    }
-}
-
-impl Ord for ControlTableRow {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.address.cmp(&other.address)
-    }
-}
-
-impl PartialOrd for ControlTableRow {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.address.cmp(&other.address))
-    }
-}
-
-impl ControlTableRow {
-    fn parse(header: &str, row: &str, area: Option<&str>) -> Result<Option<ControlTableRow>> {
-        let mut cells = header
-            .split("|")
-            .zip(row.split("|"))
-            .skip(1) // remove first empty cell
-            .collect_vec();
-        _ = cells.pop(); //remove last empty cell
-
-        let find = |pattern| -> Option<String> {
-            cells.iter().find_map(|(header, cell)| {
-                header
-                    .to_lowercase()
-                    .contains(pattern)
-                    .then_some(cell.trim().to_string())
-            })
-        };
-
-        let address = find("address").unwrap();
-        let size = find("size").unwrap();
-        let data_name = find("data").unwrap();
-        let access = find("access").unwrap();
-        let initial_value = find("initial").unwrap();
-        let range = find("range").unwrap().replace("<br>", " ").replace(",", "");
-        let unit = find("unit").unwrap();
-        let area = find("area")
-            .or_else(|| area.map(|s| s.to_string()))
-            .ok_or(anyhow!("missing area"))?;
-
-        let mut data_name = Regex::new(r"\[(.+)]")
-            .unwrap()
-            .captures(&data_name)
-            .context(anyhow!("failed to parse data name: {}", &data_name))?
-            .get(1)
-            .unwrap()
-            .as_str()
-            .to_string();
-
-        if data_name.contains("(") {
-            let re = Regex::new(r"\(.*\)").expect("tested");
-            data_name = re.replace(data_name.as_str(), "").to_string();
-        }
-
-        let data_name = match data_name.to_string().to_case(Case::Pascal).parse() {
-            Ok(data_name) => data_name,
-            Err(e) => {
-                println!("error parsing {}: {}", data_name, e);
-                return Ok(None);
-            }
-        };
-        let initial_value = (initial_value.is_empty()
-            || initial_value.contains("-")
-            || initial_value.contains("br"))
-        .not()
-        .then(|| {
-            let initial_value = initial_value.replace(",", "");
-            initial_value
-                .parse()
-                .with_context(|| anyhow!("failed to parse initial value: {}", initial_value))
-        })
-        .transpose()?;
-        // println!("parsed {}", data_name);
-        Ok(Some(Self {
-            address: address
-                .parse()
-                .with_context(|| anyhow!("failed to parse address {}", address))?,
-            size: size
-                .parse()
-                .with_context(|| anyhow!("failed to parse size {}", size))?,
-            data_name,
-            access,
-            initial_value,
-            range,
-            unit,
-            area,
-        }))
-    }
-}
-
-#[derive(Debug, Clone)]
-struct Model {
-    name: String,
-    model: dynamixel_registers::models::Model,
-    table: BTreeMap<Register, ControlTableRow>,
-}
-
-fn to_model_macro_from_group(file: &mut File, model_group: &ModelGroup) -> Result<()> {
-    writeln!(file, "//! Dynamixel XM430 model definitions.")?;
-    writeln!(file)?;
-    writeln!(file, "use crate::model;")?;
-    writeln!(file)?;
-
-    writeln!(file)?;
-    writeln!(file, "model![{} {{", model_group.alias.keys().join(" "))?;
-
-    for row in model_group.table.values() {
-        writeln!(
-            file,
-            "{}: {}, {},",
-            row.data_name, row.address, row.size,
-        )?;
-    }
-
-    writeln!(file, "}}];")?;
-    Ok(())
-}
-
-fn parse_table(model_file: impl AsRef<Path>) -> Result<Model> {
-    let model_file = model_file.as_ref();
-    let file_name = model_file
-        .file_name()
-        .ok_or(anyhow!("no file name"))?
-        .to_str()
-        .ok_or(anyhow!("error parsing file name"))?;
-    let file = fs::read_to_string(model_file)?;
-
-    let parse_table = |start: &str,
-                       area: Option<&str>|
-     -> anyhow::Result<BTreeMap<Register, ControlTableRow>> {
-        let (start, _) = file
-            .lines()
-            .find_position(|p| p.to_lowercase().contains(&start.to_lowercase()))
-            .ok_or(anyhow!("cannot find {} table", start))?;
-        let mut lines = file.lines();
-        let table = lines.by_ref().skip(start).skip_while(|l| !l.contains("|"));
-
-        let mut table = table.take_while(|l| l.contains("|"));
-        let header = table.next().unwrap();
-        // println!("header: {}", header);
-        table
-            .skip(1)
-            .filter(|r| {
-                !r.contains("…") && !r.contains("···") && !r.contains("...") && !r.contains("N/A")
-            })
-            .flat_map(|r| {
-                ControlTableRow::parse(header, r, area)
-                    .with_context(|| anyhow!("failed to parse row {}", r))
-                    .transpose()
-            })
-            .map(|table| table.map(|t| (t.data_name, t)))
-            .try_collect()
-    };
-
-    let try_double_table =
-        || -> anyhow::Result<(BTreeMap<Register, ControlTableRow>, BTreeMap<Register, ControlTableRow>)> {
-            let eeprom = parse_table("Control Table of EEPROM Area", Some("EEPROM"))?;
-
-            let ram = parse_table("Control Table of RAM Area", Some("RAM"))?;
-            Ok((eeprom, ram))
-        };
-
-    let table = match try_double_table() {
-        Err(e) => parse_table("Control Table", None)
-            .with_context(|| e)
-            .with_context(|| anyhow!("failed to parse double table and single table"))?,
-        Ok((mut eeprom, mut ram)) => {
-            eeprom.append(&mut ram);
-            eeprom
-        }
-    };
-
-    let (_, model_number) = table
-        .iter()
-        .find(|(r, _)| r == &&Register::ModelNumber)
-        .expect("can't find modelNumber");
-    let model_number = model_number
-        .initial_value
-        // .ok_or_else(|| anyhow!("no initial model number {:?}", model_number))?
-        .unwrap_or_default() as u16;
-    let name = file_name
-        .split(".")
-        .next()
-        .unwrap()
-        .to_string()
-        .to_uppercase()
-        .replace("-", "_");
-    let model = DModel::from_str(&name).unwrap_or(
-        DModel::from_u16(model_number)
-            .ok_or_else(|| anyhow!("cannot find model for {} = {},", name, model_number))?,
-    );
-    let model = Model {
-        name,
-        model,
-        table,
-    };
-
-    Ok(model)
-}
-
-fn write_file_model_group(
-    mod_path: impl AsRef<Path>,
-    file_path: impl AsRef<Path>,
-    model: ModelGroup,
-) -> Result<()> {
-    let file_path = file_path.as_ref();
-    let folder = file_path.parent().unwrap();
-    fs::create_dir_all(folder)?;
-    let mut file = fs::OpenOptions::new()
-        .write(true)
-        .create(true)
-        .truncate(true)
-        .open(file_path)?;
-    println!(
-        "writing model {} to file {}",
-        model.table_name(),
-        file_path.display()
-    );
-    to_model_macro_from_group(&mut file, &model)?;
-
-    let mod_path = mod_path.as_ref();
-
-    let folder = mod_path.parent().unwrap();
-    fs::create_dir_all(folder)?;
-    let mut mod_file = fs::OpenOptions::new()
-        .append(true)
-        .create(true)
-        .open(mod_path)?;
-    writeln!(mod_file, "mod {};", model.file_name())?;
-    writeln!(mod_file, "pub use {}::*;", model.file_name())?;
-
-    Ok(())
-}
