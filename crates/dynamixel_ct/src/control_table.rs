@@ -5,8 +5,7 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use dynamixel_registers::models::Model;
-use dynamixel_registers::error::Error;
+use dynamixel_registers::models::{Model};
 use dynamixel_registers::Register;
 use dynamixel_registers::RegisterData;
 
@@ -23,12 +22,12 @@ pub struct ControlTable {
 
 impl ControlTable {
     /// Create a new control table for a specific model. If the model is not yet implemented, the error [`Error::NotImplemented`] is returned.
-    pub fn new(model: Model) -> Result<Self, Error> {
-        let table = crate::models::control_table(&model);
-        Ok(ControlTable {
+    pub fn new(model: Model) -> Self {
+        let table = crate::models::control_table_from_model(&model);
+        ControlTable {
             model,
             table,
-        })
+        }
     }
 
     /// Get the model for this control table.
@@ -42,9 +41,8 @@ impl ControlTable {
     }
 }
 
-impl TryFrom<Model> for ControlTable {
-    type Error = Error;
-    fn try_from(model: Model) -> Result<Self, Self::Error> {
+impl From<Model> for ControlTable {
+    fn from(model: Model) -> Self {
         ControlTable::new(model)
     }
 }

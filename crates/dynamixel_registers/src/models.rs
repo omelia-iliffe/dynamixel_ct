@@ -1,17 +1,28 @@
+use crate::error::Error;
 use num_derive::{FromPrimitive, ToPrimitive};
+use num_traits::{FromPrimitive, ToPrimitive};
 #[cfg(feature = "serde")]
 use std::str::FromStr;
-use num_traits::{FromPrimitive, ToPrimitive};
-use crate::error::Error;
 
 /// Dynamixel model names and numbers
 #[derive(
-    PartialEq, Eq, Clone, Copy, FromPrimitive, ToPrimitive, derive_more::Display, Ord, PartialOrd,
+    PartialEq,
+    Eq,
+    Clone,
+    Copy,
+    FromPrimitive,
+    ToPrimitive,
+    derive_more::Display,
+    Ord,
+    PartialOrd,
 )]
 #[repr(u16)]
 #[allow(non_camel_case_types)]
 #[allow(missing_docs)]
-#[cfg_attr(feature = "serde", derive(serde_repr::Serialize_repr, strum::EnumString))]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_repr::Serialize_repr, strum::EnumString)
+)]
 pub enum Model {
     XL330_M077 = 1190,
     XL330_M288 = 1200,
@@ -76,23 +87,41 @@ pub enum Model {
     YM080_230_A099_RH = 4170,
 }
 
+impl Model {
+    #[cfg(feature = "serde")]
+    pub fn model_group(&self) -> ModelGroup {
+        let s = self.to_string();
+        let s = s.split("_").next().expect("All Models contain an _");
+        ModelGroup::from_str(s).unwrap_or_else(|e| panic!("All Models groups first section maps to a ModelGroup, {e}, {self}"))
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy, derive_more::Display, Ord, PartialOrd)]
+#[repr(u16)]
+#[allow(non_camel_case_types)]
+#[allow(missing_docs)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Deserialize, serde::Serialize, strum::EnumString)
+)]
 pub enum ModelGroup {
-    XD540,
-    XH540,
-    XM540,
-    XC430,
-    XW540,
-    XC330,
-    XL330,
-    XD430,
-    XH430,
-    XM430,
-    YM070,
-    YM080,
     PH42,
     PH54,
     PM42,
     PM54,
+    XC330,
+    XC430,
+    XD430,
+    XD540,
+    XH430,
+    XH540,
+    XL330,
+    XL430,
+    XM430,
+    XM540,
+    XW540,
+    YM070,
+    YM080,
 }
 
 #[cfg(feature = "serde")]
@@ -146,8 +175,8 @@ impl PartialEq<u16> for Model {
 
 #[cfg(test)]
 mod tests {
-    use crate::error::Error;
     use super::Model;
+    use crate::error::Error;
 
     #[test]
     fn test_model_from_number() {
