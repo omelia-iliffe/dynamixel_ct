@@ -69,7 +69,7 @@ impl From<Model> for ModelGroup {
 #[allow(missing_docs)]
 #[cfg_attr(
     feature = "serde",
-    derive(serde_repr::Serialize_repr, strum::EnumString)
+    derive(serde::Serialize, strum::EnumString)
 )]
 pub enum Model {
     XL330_M077 = 1190,

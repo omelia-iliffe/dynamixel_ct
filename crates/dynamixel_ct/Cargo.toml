@@ -8,13 +8,11 @@ repository = "https://github.com/omelia-iliffe/dynamixel_ct"
 description = "A crate for working with the control tables of Dynamixel servos"
 
 [features]
-serde = ["dep:serde", "serde_repr", "strum"]
+serde = ["dep:serde", "strum", "dynamixel_registers/serde"]
 
 [dependencies]
 dynamixel_registers.workspace = true
-derive_more = { version = "2.0.1", features = ["display", "error"] }
 serde = { version = "1.0.215", optional = true, features = ["derive"] }
-serde_repr = { version = "0.1.19" , optional = true }
 strum = { version = "0.26", features = ["derive"], optional = true}
 
 
