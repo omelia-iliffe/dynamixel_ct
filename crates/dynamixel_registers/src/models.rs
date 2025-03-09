@@ -1,4 +1,3 @@
-use crate::error::Error;
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::{FromPrimitive, ToPrimitive};
 #[cfg(feature = "serde")]
@@ -196,11 +195,19 @@ impl core::fmt::Debug for Model {
     }
 }
 
+
+/// The model number is not known or is not yet supported.
+#[derive(Debug, Clone, Copy, derive_more::Error, derive_more::Display, PartialEq)]
+#[display("model number {_0} is either invalid or not implemented")]
+pub struct UnknownModel(
+    #[error(not(source))] u16
+);
+
 impl TryFrom<u16> for Model {
-    type Error = Error;
+    type Error = UnknownModel;
 
     fn try_from(model_number: u16) -> Result<Self, Self::Error> {
-        Model::from_u16(model_number).ok_or(Error::UnknownModel)
+        Model::from_u16(model_number).ok_or(UnknownModel(model_number))
     }
 }
 
@@ -212,16 +219,15 @@ impl PartialEq<u16> for Model {
 
 #[cfg(test)]
 mod tests {
-    use super::Model;
-    use crate::error::Error;
+    use super::{Model, UnknownModel};
 
     #[test]
     fn test_model_from_number() {
-        let model: Result<Model, Error> = 4030.try_into();
+        let model: Result<Model, UnknownModel> = 4030.try_into();
         assert_eq!(model, Ok(Model::YM070_200_R099_RH));
 
-        let model: Result<Model, Error> = 1075.try_into();
-        assert_eq!(model, Err(Error::UnknownModel));
+        let model: Result<Model, UnknownModel> = 1075.try_into();
+        assert_eq!(model, Err(UnknownModel(1075)));
     }
 
     #[test]
@@ -229,7 +235,7 @@ mod tests {
     fn test_serde_json() {
         let model = Model::XM430_W210;
         let json = serde_json::to_string(&model).unwrap();
-        assert_eq!(json, "1030");
+        assert_eq!(json, "\"XM430_W210\"");
 
         let model: Model = serde_json::from_str("\"XM430_W350\"").unwrap();
         assert_eq!(model, Model::XM430_W350);
@@ -248,7 +254,7 @@ mod tests {
             model: Model::XM430_W210,
         };
         let toml = toml::to_string(&model).unwrap();
-        assert_eq!(toml, "model = 1030\n");
+        assert_eq!(toml, "model = \"XM430_W210\"\n");
 
         let model: Test = toml::from_str("model = \"XM430_W350\"").unwrap();
         assert_eq!(model.model, Model::XM430_W350);

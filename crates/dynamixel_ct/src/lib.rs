@@ -21,7 +21,7 @@
 //! use dynamixel_registers::models::Model;
 //! let xm430 = models::XM430::new();
 //! let y = models::YM070::new();
-//! let new = ControlTable::new(Model::XM430_W210).unwrap();
+//! let new = ControlTable::new_with_model(Model::XM430_W210);
 //!
 //! println!("{:?}", xm430.get(GoalPosition));
 //! println!("{:?}", y.get(GoalPosition));
@@ -34,6 +34,7 @@ pub mod models;
 mod model_macro;
 
 pub use control_table::ControlTable;
+pub use dynamixel_registers::models::{Model, ModelOrModelGroup, ModelGroup};
 pub use dynamixel_registers::{RegisterData, Register};
 
 pub(crate) use model_macro::model;
