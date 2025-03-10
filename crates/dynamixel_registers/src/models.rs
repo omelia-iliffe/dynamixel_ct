@@ -45,6 +45,12 @@ pub enum ModelGroup {
     YM080,
 }
 
+impl ModelGroup {
+    pub fn contains(&self, model: Model) -> bool {
+        self == &model.model_group()
+    }
+}
+
 impl From<Model> for ModelGroup {
     fn from(model: Model) -> Self {
         model.model_group()
