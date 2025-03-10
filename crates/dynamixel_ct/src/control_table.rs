@@ -9,12 +9,13 @@ use dynamixel_registers::RegisterData;
 
 /// A control table for a specific model.
 /// The table is statically allocated to reduce memory usage.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone, derive_more::Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "serde", serde(from = "ModelOrModelGroup", into = "ModelOrModelGroup"))]
 pub struct ControlTable {
     model: Option<Model>,
     model_group: ModelGroup,
+    #[cfg_attr(not(feature="debug_full_ct"), debug(ignore))]
     table: &'static HashMap<Register, RegisterData>,
 }
 
