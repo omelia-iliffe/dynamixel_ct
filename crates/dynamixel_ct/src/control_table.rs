@@ -74,6 +74,18 @@ impl From<ControlTable> for ModelOrModelGroup {
     }
 }
 
+impl From<Model> for ControlTable {
+    fn from(model: Model) -> Self {
+        ControlTable::new_with_model(model)
+    }
+}
+
+impl From<ModelGroup> for ControlTable {
+    fn from(model_group: ModelGroup) -> Self {
+        ControlTable::new(model_group)
+    }
+}
+
 impl core::fmt::Display for ControlTable {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         if let Some(model) = self.model {
