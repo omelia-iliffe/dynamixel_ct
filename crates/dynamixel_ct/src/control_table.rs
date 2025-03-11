@@ -10,8 +10,6 @@ use dynamixel_registers::RegisterData;
 /// A control table for a specific model.
 /// The table is statically allocated to reduce memory usage.
 #[derive(PartialEq, Eq, Clone, derive_more::Debug)]
-#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
-#[cfg_attr(feature = "serde", serde(from = "ModelOrModelGroup", into = "ModelOrModelGroup"))]
 pub struct ControlTable {
     model: Option<Model>,
     model_group: ModelGroup,
@@ -105,34 +103,35 @@ mod test {
 
     #[test]
     fn test_serde_json() {
-        let control_table: ControlTable = serde_json::from_str("\"XM430_W350\"").unwrap();
+        let model: Model = serde_json::from_str("\"XM430_W350\"").unwrap();
+        let control_table: ControlTable = model.into();
         assert_eq!(control_table, ControlTable::new_with_model(XM430_W350));
 
-        let control_table: ControlTable = serde_json::from_str("1020").unwrap();
+        let model: Model = serde_json::from_str("1020").unwrap();
+        let control_table: ControlTable = model.into();
         assert_eq!(control_table, ControlTable::new_with_model(XM430_W350));
     }
     #[test]
     fn test_serde_toml() {
         #[derive(serde::Deserialize, serde::Serialize)]
         struct Test {
-            #[serde(rename = "model")]
-            pub ct: ControlTable,
+            pub model: ModelOrModelGroup,
         }
         let model = Test {
-            ct: ControlTable::new_with_model(XM430_W210),
+            model: ModelOrModelGroup::Model(XM430_W210),
         };
+
         let toml = toml::to_string(&model).unwrap();
         assert_eq!(toml, "model = \"XM430_W210\"\n");
 
         let model: Test = toml::from_str("model = \"XM430_W350\"").unwrap();
-        assert_eq!(model.ct.model, Some(XM430_W350));
+        assert_eq!(model.model, ModelOrModelGroup::Model(XM430_W350));
 
         let model: Test = toml::from_str("model = 1020").unwrap();
-        assert_eq!(model.ct.model, Some(XM430_W350));
+        assert_eq!(model.model, ModelOrModelGroup::Model(XM430_W350));
 
         let model: Test = toml::from_str("model = \"XM430\"").unwrap();
-        assert_eq!(model.ct.model, None);
-        assert_eq!(model.ct.model_group, XM430);
+        assert_eq!(model.model, ModelOrModelGroup::ModelGroup(XM430));
     }
 }
 

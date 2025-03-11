@@ -5,22 +5,31 @@ use std::str::FromStr;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, derive_more::Display, Ord, PartialOrd)]
 #[repr(u16)]
-#[allow(non_camel_case_types)]
-#[allow(missing_docs)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde::Deserialize, serde::Serialize)
-)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "serde", serde(untagged))]
 pub enum ModelOrModelGroup {
     Model(Model),
     ModelGroup(ModelGroup),
 }
 
+impl ModelOrModelGroup {
+    pub fn model(&self) -> Option<Model> {
+        match self {
+            ModelOrModelGroup::Model(model) => Some(*model),
+            ModelOrModelGroup::ModelGroup(_) => None,
+        }
+    }
+
+    pub fn model_group(&self) -> ModelGroup {
+        match self {
+            ModelOrModelGroup::Model(model) => model.model_group(),
+            ModelOrModelGroup::ModelGroup(model_group) => *model_group,
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Clone, Copy, derive_more::Display, Ord, PartialOrd)]
 #[repr(u16)]
-#[allow(non_camel_case_types)]
-#[allow(missing_docs)]
 #[cfg_attr(
     feature = "serde",
     derive(serde::Deserialize, serde::Serialize, strum::EnumString)
