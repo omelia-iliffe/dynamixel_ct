@@ -14,6 +14,7 @@ mod ph42_ph54_pm42_pm54;
 pub use ph42_ph54_pm42_pm54::*;
 
 #[expect(unused)]
+#[cfg(feature = "std")]
 pub(crate) fn control_table_from_model(model: &dynamixel_registers::models::Model) -> &'static std::collections::HashMap<dynamixel_registers::Register, dynamixel_registers::RegisterData> {
     use dynamixel_registers::models::Model::*;
     match model {
@@ -37,6 +38,7 @@ pub(crate) fn control_table_from_model(model: &dynamixel_registers::models::Mode
     }
 }
 
+#[cfg(feature = "std")]
 pub(crate) fn control_table_from_model_group(model_group: &dynamixel_registers::models::ModelGroup) -> &'static std::collections::HashMap<dynamixel_registers::Register, dynamixel_registers::RegisterData> {
     use dynamixel_registers::models::ModelGroup;
     match model_group {

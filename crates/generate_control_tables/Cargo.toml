@@ -9,7 +9,7 @@ itertools = "0.14.0"
 walkdir = "2.5.0"
 regex = "1.11.1"
 convert_case = "0.8.0"
-dynamixel_registers = {path = "../dynamixel_registers"}
+dynamixel_registers = {path = "../dynamixel_registers", features = ["serde"]}
 num-traits = "0.2.19"
 
 [features]

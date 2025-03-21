@@ -27,11 +27,14 @@
 //! println!("{:?}", new.get(GoalPosition));
 //! ```
 // #![warn(missing_docs)]
+#![cfg_attr(not(feature = "std"), no_std)]
 
+#[cfg(feature = "std")]
 pub mod control_table;
 pub mod models;
 mod model_macro;
 
+#[cfg(feature = "std")]
 pub use control_table::ControlTable;
 pub use dynamixel_registers::models::{Model, ModelOrModelGroup, ModelGroup};
 pub use dynamixel_registers::{RegisterData, Register};

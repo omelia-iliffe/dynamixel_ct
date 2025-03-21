@@ -2,7 +2,6 @@
 //!
 //! The control table is statically allocated to reduce memory usage.
 //!
-use std::collections::HashMap;
 use dynamixel_registers::models::{Model, ModelGroup, ModelOrModelGroup};
 use dynamixel_registers::Register;
 use dynamixel_registers::RegisterData;
@@ -14,7 +13,7 @@ pub struct ControlTable {
     model: Option<Model>,
     model_group: ModelGroup,
     #[cfg_attr(not(feature="debug_full_ct"), debug(ignore))]
-    table: &'static HashMap<Register, RegisterData>,
+    table: &'static std::collections::HashMap<Register, RegisterData>,
 }
 
 impl ControlTable {

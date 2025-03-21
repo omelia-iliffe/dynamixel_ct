@@ -14,7 +14,9 @@ serde = { version = "1", optional = true, features = ["derive"]}
 derive_more = { version = "2", features = ["display", "error"]}
 strum = {version = "0.27.1", features = ["strum_macros", "derive"], optional = true}
 [features]
-serde = ["dep:serde", "strum"]
+default = ["std"]
+std = []
+serde = ["std", "dep:serde", "strum"]
 
 [dev-dependencies]
 serde_json = "1.0.132"

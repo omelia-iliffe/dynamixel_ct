@@ -6,6 +6,7 @@
 macro_rules! model {
     (@BASE_MODEL {$($reg:ident : $addr:expr, $len:expr,)+}) => {
         paste::paste!{
+            #[cfg(feature = "std")]
             pub(crate) static TABLE: std::sync::LazyLock<std::collections::HashMap<$crate::Register, $crate::RegisterData>> = std::sync::LazyLock::new(|| {
                 [
                     $(
@@ -41,6 +42,7 @@ macro_rules! model {
         impl $model {
 
             #[doc = concat!("Acquire a static reference to the control table for the ", stringify!($model), " models.")]
+            #[cfg(feature = "std")]
             pub(crate) fn table() -> &'static std::collections::HashMap<$crate::Register, $crate::RegisterData> {
                 &*TABLE
             }
