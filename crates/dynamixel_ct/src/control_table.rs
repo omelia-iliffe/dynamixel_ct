@@ -17,7 +17,7 @@ pub struct ControlTable {
 }
 
 impl ControlTable {
-    /// Create a new control table for a specific model. If the model is not yet implemented, the error [`Error::NotImplemented`] is returned.
+    /// Create a new control table for a specific model.
     pub fn new(model_group: ModelGroup) -> Self {
         let table = crate::models::control_table_from_model_group(&model_group);
         ControlTable {
@@ -27,6 +27,7 @@ impl ControlTable {
         }
     }
 
+    /// Create a ControlTable with an exact [`Model`]
     pub fn new_with_model(model: Model) -> Self {
         let model_group = model.into();
         let table = crate::models::control_table_from_model_group(&model_group);
@@ -37,11 +38,12 @@ impl ControlTable {
         }
     }
 
-    /// Get the model for this control table.
+    /// Get the [`Model`] for this [`ControlTable`]. Returns an `Option` as there may not be an exact [`Model`] and only a [`ModelGroup`]
     pub fn model(&self) -> Option<Model> {
         self.model
     }
 
+    /// Get the [`ModelGroup`] for this [`ControlTable`]
     pub fn model_group(&self) -> ModelGroup {
         self.model_group
     }

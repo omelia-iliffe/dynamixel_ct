@@ -1,5 +1,3 @@
-//! Dynamixel XM430 model definitions.
-
 use crate::model;
 
 

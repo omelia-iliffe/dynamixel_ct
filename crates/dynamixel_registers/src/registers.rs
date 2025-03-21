@@ -1,6 +1,6 @@
 //! This module defines the RegisterData struct and each possible register in the control table.
 
-/// RegisterData is used to store the address, length and type of register.
+/// RegisterData is used to store the address and length of register.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct RegisterData {

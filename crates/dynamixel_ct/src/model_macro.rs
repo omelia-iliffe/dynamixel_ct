@@ -1,4 +1,4 @@
-//! The [`crate::model!`] macro definition.
+//! The [`model!`] macro definition.
 //!
 
 /// The [`model!`] macro is used to define the control table for a specific model.
@@ -7,27 +7,26 @@ macro_rules! model {
     (@BASE_MODEL {$($reg:ident : $addr:expr, $len:expr,)+}) => {
         paste::paste!{
             #[cfg(feature = "std")]
-            pub(crate) static TABLE: std::sync::LazyLock<std::collections::HashMap<$crate::Register, $crate::RegisterData>> = std::sync::LazyLock::new(|| {
+            pub(crate) static TABLE: std::sync::LazyLock<std::collections::HashMap<Register, RegisterData>> = std::sync::LazyLock::new(|| {
                 [
                     $(
-                        ($crate::Register::$reg, [<base_ $reg:snake>]()),
+                        (Register::$reg, [<base_ $reg:snake>]()),
                     )+
                 ].iter().cloned().collect()
             });
 
-            fn base_get(register: $crate::Register) -> Option<$crate::RegisterData> {
+            const fn base_get(register: Register) -> Option<RegisterData> {
                 match register {
                     $(
-                        $crate::Register::$reg => Some([<base_ $reg:snake>]()),
+                        Register::$reg => Some([<base_ $reg:snake>]()),
                     )+
                     _ => None,
                 }
             }
 
-
             $(
-                fn [< base_ $reg:snake>] () -> $crate::RegisterData {
-                    $crate::RegisterData {
+                const fn [< base_ $reg:snake>] () -> RegisterData {
+                    RegisterData {
                         address: $addr,
                         length: $len,
                     }
@@ -36,24 +35,25 @@ macro_rules! model {
         }
     };
     (@MODEL $model:ident {$($reg:ident : $addr:expr, $len:expr,)+}) => {
-        #[doc = concat!("The Control Table for the ", stringify!($model), " models.")]
-        pub struct $model;
+        paste::paste! {
+            #[doc = "The Control Table for the " $model " models."]
+            pub struct $model;
 
-        impl $model {
+            impl $model {
 
-            #[doc = concat!("Acquire a static reference to the control table for the ", stringify!($model), " models.")]
-            #[cfg(feature = "std")]
-            pub(crate) fn table() -> &'static std::collections::HashMap<$crate::Register, $crate::RegisterData> {
-                &*TABLE
-            }
+                #[cfg(feature = "std")]
+                pub(crate) fn table() -> &'static std::collections::HashMap<Register, RegisterData> {
+                    &*TABLE
+                }
 
-            pub fn get(register: $crate::Register) -> Option<$crate::RegisterData> {
-                base_get(register)
-            }
+                #[doc = "return the [`RegisterData`] for this register. Returns an `Option` as the register may not present for this model"]
+                pub const fn get(register: Register) -> Option<RegisterData> {
+                    base_get(register)
+                }
 
-            paste::paste! {
                 $(
-                    pub fn [<$reg:snake>]() -> $crate::RegisterData {
+                    #[doc = "returns the [`RegisterData`] for [`Register::" $reg "`]"]
+                    pub const fn [<$reg:snake>]() -> RegisterData {
                         [<base_ $reg:snake>]()
                     }
                 )+
@@ -62,8 +62,9 @@ macro_rules! model {
 
     };
     ($($model:ident)+ => $registers:tt  ) => {
+        use $crate::RegisterData;
+        use $crate::Register;
         model!(@BASE_MODEL $registers);
-
 
         $(
             model!(@MODEL $model $registers);

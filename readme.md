@@ -5,9 +5,8 @@ This library is intended to be used with an additional library that provides the
 
 The data for register is currently limited to address and size (length), however expanding this to include the data type and access level is planned.
 
-The current implementation uses static hashmaps of registers internally so is **not** currently `no_std` compatible.
-
 ## Dynamic Control Table
+**Only available with `std` feature**  
 The library can be used to return a control table when the model number is not known at compile time,
 allowing for a more dynamic approach to working with servos.
 
@@ -26,10 +25,10 @@ MX will not be supported.
 
 #### Using a known model
 ```rust
-use dynamixel_ct::{models, Register::*};
+use dynamixel_ct::{models::XM430, Register::*};
 fn main() {
-    let xm430 = models::XM430::new();
-    println!("{:?}", xm430.get(goal_position););
+    println!("{:?}", XM430::get(goal_position););
+    println!("{:?}", XM430::goal_position(););
     /// Output: Some(RegisterData { address: 116, length: 4 })
 }
 ```

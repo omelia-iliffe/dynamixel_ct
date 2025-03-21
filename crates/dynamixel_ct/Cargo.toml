@@ -1,6 +1,6 @@
 [package]
 name = "dynamixel_ct"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 license = "MIT"
 readme = "../../readme.md"
@@ -19,9 +19,9 @@ serde = ["std", "dep:serde", "strum", "dynamixel_registers/serde"]
 debug_full_ct = []
 
 [dependencies]
-dynamixel_registers = {path = "../dynamixel_registers", version = "0.2.0"}
+dynamixel_registers = {path = "../dynamixel_registers", version = "0.3.0"}
 serde = { version = "1", optional = true, features = ["derive"] }
-strum = { version = "0.26", features = ["derive"], optional = true}
+strum = { version = "0.27", features = ["derive"], optional = true}
 derive_more = { version = "2" , features = ["debug"]}
 paste = "1.0.15"
 

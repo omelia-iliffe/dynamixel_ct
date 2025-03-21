@@ -1,6 +1,6 @@
 [package]
 name = "dynamixel_registers"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 readme = "readme.md"
 license = "MIT"
@@ -12,7 +12,7 @@ num-derive = "0.4"
 num-traits = { version = "0.2" }
 serde = { version = "1", optional = true, features = ["derive"]}
 derive_more = { version = "2", features = ["display", "error"]}
-strum = {version = "0.27.1", features = ["strum_macros", "derive"], optional = true}
+strum = {version = "0.27", features = ["strum_macros", "derive"], optional = true}
 [features]
 default = ["std"]
 std = []

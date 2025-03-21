@@ -1,3 +1,6 @@
+//! The Control Tables for all supported models.
+//! These structs can be used with `no_std`
+
 mod xd540_xh540_xm540;
 pub use xd540_xh540_xm540::*;
 mod xc430_xl430;

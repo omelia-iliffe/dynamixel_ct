@@ -12,6 +12,10 @@
 //! println!("{:?}", XM430::get(Register::GoalPosition));
 //! println!("{:?}", XM430::get(Register::GoalCurrent));
 //! println!("{:?}", XM430::get(Register::GoalVelocity));
+//! // or
+//! println!("{:?}", XM430::goal_position());
+//! println!("{:?}", XM430::goal_current());
+//! println!("{:?}", XM430::goal_velocity());
 //! ```
 //!
 //! ### Example
@@ -26,7 +30,7 @@
 //! println!("{:?}", YM070::get(GoalPosition));
 //! println!("{:?}", new.get(GoalPosition));
 //! ```
-// #![warn(missing_docs)]
+#![warn(missing_docs)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(feature = "std")]

@@ -1,4 +1,4 @@
-//! Dynamixel XM430 model definitions.
+//! Dynamixel XW540 model definitions.
 
 use crate::model;
 
