@@ -53,7 +53,7 @@ fn to_model_macro_from_group(file: &mut File, model_group: &ModelGroup) -> anyho
     writeln!(file)?;
 
     writeln!(file)?;
-    writeln!(file, "model![{} {{", model_group.alias().keys().join(" "))?;
+    writeln!(file, "model![{} => {{", model_group.alias().keys().join(" "))?;
 
     for row in model_group.table().values() {
         writeln!(

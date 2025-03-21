@@ -2,8 +2,7 @@
 
 use crate::model;
 
-
-model![YM070 YM080 {
+model![YM070 YM080 => {
 ModelNumber: 0, 2,
 ModelInformation: 2, 4,
 FirmwareVersion: 6, 1,

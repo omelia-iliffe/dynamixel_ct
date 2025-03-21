@@ -3,7 +3,7 @@
 use crate::model;
 
 
-model![XC430 XL430 {
+model![XC430 XL430 => {
 ModelNumber: 0, 2,
 ModelInformation: 2, 4,
 FirmwareVersion: 6, 1,

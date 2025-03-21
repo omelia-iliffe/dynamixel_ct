@@ -3,7 +3,7 @@
 use crate::model;
 
 
-model![XW540 {
+model![XW540 => {
 ModelNumber: 0, 2,
 ModelInformation: 2, 4,
 FirmwareVersion: 6, 1,

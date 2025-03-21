@@ -3,7 +3,7 @@
 use crate::model;
 
 
-model![PH42 PH54 PM42 PM54 {
+model![PH42 PH54 PM42 PM54 => {
 ModelNumber: 0, 2,
 ModelInformation: 2, 4,
 FirmwareVersion: 6, 1,
