@@ -12,7 +12,7 @@ serde = ["dep:serde", "strum", "dynamixel_registers/serde"]
 debug_full_ct = []
 
 [dependencies]
-dynamixel_registers.workspace = true
+dynamixel_registers = {path = "../dynamixel_registers", version = "0.2.0"}
 serde = { version = "1", optional = true, features = ["derive"] }
 strum = { version = "0.26", features = ["derive"], optional = true}
 derive_more = { version = "2" , features = ["debug"]}

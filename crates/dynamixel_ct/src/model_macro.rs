@@ -6,33 +6,33 @@
 macro_rules! model {
     (@BASE_MODEL {$($reg:ident : $addr:expr, $len:expr,)+}) => {
         paste::paste!{
-        pub(crate) static TABLE: std::sync::LazyLock<std::collections::HashMap<$crate::Register, $crate::RegisterData>> = std::sync::LazyLock::new(|| {
-            [
-                $(
-                    ($crate::Register::$reg, [<base_ $reg:snake>]()),
-                )+
-            ].iter().cloned().collect()
-        });
+            pub(crate) static TABLE: std::sync::LazyLock<std::collections::HashMap<$crate::Register, $crate::RegisterData>> = std::sync::LazyLock::new(|| {
+                [
+                    $(
+                        ($crate::Register::$reg, [<base_ $reg:snake>]()),
+                    )+
+                ].iter().cloned().collect()
+            });
 
-        fn base_get(register: $crate::Register) -> Option<$crate::RegisterData> {
-            match register {
-                $(
-                    $crate::Register::$reg => Some([<base_ $reg:snake>]()),
-                )+
-                _ => None,
-            }
-        }
-
-
-        $(
-            fn [< base_ $reg:snake>] () -> $crate::RegisterData {
-                $crate::RegisterData {
-                    address: $addr,
-                    length: $len,
+            fn base_get(register: $crate::Register) -> Option<$crate::RegisterData> {
+                match register {
+                    $(
+                        $crate::Register::$reg => Some([<base_ $reg:snake>]()),
+                    )+
+                    _ => None,
                 }
             }
-        )+
-    }
+
+
+            $(
+                fn [< base_ $reg:snake>] () -> $crate::RegisterData {
+                    $crate::RegisterData {
+                        address: $addr,
+                        length: $len,
+                    }
+                }
+            )+
+        }
     };
     (@MODEL $model:ident {$($reg:ident : $addr:expr, $len:expr,)+}) => {
         #[doc = concat!("The Control Table for the ", stringify!($model), " models.")]
