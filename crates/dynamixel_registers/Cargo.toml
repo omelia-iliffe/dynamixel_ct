@@ -1,6 +1,6 @@
 [package]
 name = "dynamixel_registers"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 readme = "readme.md"
 license = "MIT"
@@ -9,14 +9,16 @@ description = "The models and registers of Dynamixels supported by the dynamixel
 
 [dependencies]
 num-derive = "0.4"
-num-traits = { version = "0.2" }
-serde = { version = "1", optional = true, features = ["derive"]}
-derive_more = { version = "2", features = ["display", "error"]}
-strum = {version = "0.27", features = ["strum_macros", "derive"], optional = true}
+num-traits = { version = "0.2", default-features = false }
+derive_more = { workspace = true, features = ["display", "error"] }
+serde = { workspace = true, optional = true, features = ["derive"] }
+strum = { workspace = true, features = ["strum_macros", "derive"], optional = true }
+
 [features]
 default = ["std"]
+#std = ["derive_more/std", "strum/std", "serde/std"]
 std = []
-serde = ["std", "dep:serde", "strum"]
+serde = ["std", "dep:serde", "dep:strum", "serde/std", "strum/std"]
 
 [dev-dependencies]
 serde_json = "1.0.132"
