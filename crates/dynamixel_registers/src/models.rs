@@ -34,6 +34,7 @@ impl ModelOrModelGroup {
     feature = "serde",
     derive(serde::Deserialize, serde::Serialize, strum::EnumString)
 )]
+#[non_exhaustive]
 pub enum ModelGroup {
     PH42,
     PH54,
@@ -74,6 +75,7 @@ impl From<Model> for ModelGroup {
 #[allow(non_camel_case_types)]
 #[allow(missing_docs)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, strum::EnumString))]
+#[non_exhaustive]
 pub enum Model {
     XL330_M077 = 1190,
     XL330_M288 = 1200,

@@ -4,7 +4,7 @@ members = ["crates/*"]
 
 
 [workspace.dependencies]
-dynamixel_registers = { path = "crates/dynamixel_registers", version = "0.4.0", default-features = false }
+dynamixel_registers = { path = "crates/dynamixel_registers", version = "0.5.0", default-features = false }
 derive_more = { version = "2.0.1", default-features = false }
 strum = { version = "0.27.1" }
 serde = { version = "1.0.219" }

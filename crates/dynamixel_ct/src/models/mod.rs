@@ -45,6 +45,7 @@ pub(crate) fn control_table_from_model(
         PH54_100_S500_R | PH54_200_S500_R => PH54::table(),
         PM42_010_S260_R => PM42::table(),
         PM54_040_S250_R | PM54_060_S250_R => PM54::table(),
+        _ => panic!("unknown model"),
     }
 }
 
@@ -74,5 +75,6 @@ pub(crate) fn control_table_from_model_group(
         ModelGroup::PH54 => PH54::table(),
         ModelGroup::PM42 => PM42::table(),
         ModelGroup::PM54 => PM54::table(),
+        _ => panic!("unknown model group"),
     }
 }
