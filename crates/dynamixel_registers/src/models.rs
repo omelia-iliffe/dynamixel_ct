@@ -68,23 +68,12 @@ impl From<Model> for ModelGroup {
 
 /// Dynamixel model names and numbers
 #[derive(
-    PartialEq,
-    Eq,
-    Clone,
-    Copy,
-    FromPrimitive,
-    ToPrimitive,
-    derive_more::Display,
-    Ord,
-    PartialOrd,
+    PartialEq, Eq, Clone, Copy, FromPrimitive, ToPrimitive, derive_more::Display, Ord, PartialOrd,
 )]
 #[repr(u16)]
 #[allow(non_camel_case_types)]
 #[allow(missing_docs)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde::Serialize, strum::EnumString)
-)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, strum::EnumString))]
 pub enum Model {
     XL330_M077 = 1190,
     XL330_M288 = 1200,
@@ -164,14 +153,15 @@ impl Model {
             XD430_T350 | XD430_T210 => ModelGroup::XD430,
             XH430_W350 | XH430_W210 | XH430_V350 | XH430_V210 => ModelGroup::XH430,
             XM430_W350 | XM430_W210 => ModelGroup::XM430,
-            YM070_210_M001_RH | YM070_210_B001_RH | YM070_200_R051_RH | YM070_200_R099_RH | YM070_210_A051_RH | YM070_200_A099_RH => ModelGroup::YM070,
-            YM080_230_M001_RH | YM080_230_B001_RH | YM080_230_R051_RH | YM080_230_R099_RH | YM080_230_A051_RH | YM080_230_A099_RH => ModelGroup::YM080,
-            PH42_020_S300_R =>ModelGroup:: PH42,
-            PH54_100_S500_R | PH54_200_S500_R =>ModelGroup:: PH54,
-            PM42_010_S260_R =>ModelGroup:: PM42,
-            PM54_040_S250_R | PM54_060_S250_R =>ModelGroup:: PM54,
+            YM070_210_M001_RH | YM070_210_B001_RH | YM070_200_R051_RH | YM070_200_R099_RH
+            | YM070_210_A051_RH | YM070_200_A099_RH => ModelGroup::YM070,
+            YM080_230_M001_RH | YM080_230_B001_RH | YM080_230_R051_RH | YM080_230_R099_RH
+            | YM080_230_A051_RH | YM080_230_A099_RH => ModelGroup::YM080,
+            PH42_020_S300_R => ModelGroup::PH42,
+            PH54_100_S500_R | PH54_200_S500_R => ModelGroup::PH54,
+            PM42_010_S260_R => ModelGroup::PM42,
+            PM54_040_S250_R | PM54_060_S250_R => ModelGroup::PM54,
         }
-
     }
 }
 
@@ -210,13 +200,10 @@ impl core::fmt::Debug for Model {
     }
 }
 
-
 /// The model number is not known or is not yet supported.
 #[derive(Debug, Clone, Copy, derive_more::Error, derive_more::Display, PartialEq)]
 #[display("model number {_0} is either invalid or not implemented")]
-pub struct UnknownModel(
-    #[error(not(source))] u16
-);
+pub struct UnknownModel(#[error(not(source))] u16);
 
 impl TryFrom<u16> for Model {
     type Error = UnknownModel;

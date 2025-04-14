@@ -1,9 +1,9 @@
-use std::fs::File;
-use std::path::{Path, PathBuf};
-use std::fs;
-use itertools::Itertools;
-use std::io::Write;
 use crate::parse::ModelGroup;
+use itertools::Itertools;
+use std::fs;
+use std::fs::File;
+use std::io::Write;
+use std::path::{Path, PathBuf};
 
 pub fn create_match(mod_path: &PathBuf, all_models: Vec<ModelGroup>) -> anyhow::Result<()> {
     let mut mod_file = fs::OpenOptions::new()
@@ -36,8 +36,7 @@ pub fn create_match(mod_path: &PathBuf, all_models: Vec<ModelGroup>) -> anyhow::
             writeln!(
                 mod_file,
                 "        ModelGroup::{} => {}::table(),",
-                alias,
-                alias,
+                alias, alias,
             )?;
         }
     }
@@ -53,14 +52,14 @@ fn to_model_macro_from_group(file: &mut File, model_group: &ModelGroup) -> anyho
     writeln!(file)?;
 
     writeln!(file)?;
-    writeln!(file, "model![{} => {{", model_group.alias().keys().join(" "))?;
+    writeln!(
+        file,
+        "model![{} => {{",
+        model_group.alias().keys().join(" ")
+    )?;
 
     for row in model_group.table().values() {
-        writeln!(
-            file,
-            "   {}: {}, {},",
-            row.data_name, row.address, row.size,
-        )?;
+        writeln!(file, "   {}: {}, {},", row.data_name, row.address, row.size,)?;
     }
 
     writeln!(file, "}}];")?;

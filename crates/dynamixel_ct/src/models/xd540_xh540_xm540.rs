@@ -1,6 +1,5 @@
 use crate::model;
 
-
 model![XD540 XH540 XM540 => {
 ModelNumber: 0, 2,
 ModelInformation: 2, 4,

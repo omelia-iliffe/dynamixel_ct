@@ -18,7 +18,12 @@ pub use ph42_ph54_pm42_pm54::*;
 
 #[expect(unused)]
 #[cfg(feature = "std")]
-pub(crate) fn control_table_from_model(model: &dynamixel_registers::models::Model) -> &'static std::collections::HashMap<dynamixel_registers::Register, dynamixel_registers::RegisterData> {
+pub(crate) fn control_table_from_model(
+    model: &dynamixel_registers::models::Model,
+) -> &'static std::collections::HashMap<
+    dynamixel_registers::Register,
+    dynamixel_registers::RegisterData,
+> {
     use dynamixel_registers::models::Model::*;
     match model {
         XD540_T270 | XD540_T150 => XD540::table(),
@@ -32,8 +37,10 @@ pub(crate) fn control_table_from_model(model: &dynamixel_registers::models::Mode
         XD430_T350 | XD430_T210 => XD430::table(),
         XH430_W350 | XH430_W210 | XH430_V350 | XH430_V210 => XH430::table(),
         XM430_W350 | XM430_W210 => XM430::table(),
-        YM070_210_M001_RH | YM070_210_B001_RH | YM070_200_R051_RH | YM070_200_R099_RH | YM070_210_A051_RH | YM070_200_A099_RH => YM070::table(),
-        YM080_230_M001_RH | YM080_230_B001_RH | YM080_230_R051_RH | YM080_230_R099_RH | YM080_230_A051_RH | YM080_230_A099_RH => YM080::table(),
+        YM070_210_M001_RH | YM070_210_B001_RH | YM070_200_R051_RH | YM070_200_R099_RH
+        | YM070_210_A051_RH | YM070_200_A099_RH => YM070::table(),
+        YM080_230_M001_RH | YM080_230_B001_RH | YM080_230_R051_RH | YM080_230_R099_RH
+        | YM080_230_A051_RH | YM080_230_A099_RH => YM080::table(),
         PH42_020_S300_R => PH42::table(),
         PH54_100_S500_R | PH54_200_S500_R => PH54::table(),
         PM42_010_S260_R => PM42::table(),
@@ -42,7 +49,12 @@ pub(crate) fn control_table_from_model(model: &dynamixel_registers::models::Mode
 }
 
 #[cfg(feature = "std")]
-pub(crate) fn control_table_from_model_group(model_group: &dynamixel_registers::models::ModelGroup) -> &'static std::collections::HashMap<dynamixel_registers::Register, dynamixel_registers::RegisterData> {
+pub(crate) fn control_table_from_model_group(
+    model_group: &dynamixel_registers::models::ModelGroup,
+) -> &'static std::collections::HashMap<
+    dynamixel_registers::Register,
+    dynamixel_registers::RegisterData,
+> {
     use dynamixel_registers::models::ModelGroup;
     match model_group {
         ModelGroup::XD540 => XD540::table(),

@@ -12,7 +12,7 @@ use dynamixel_registers::RegisterData;
 pub struct ControlTable {
     model: Option<Model>,
     model_group: ModelGroup,
-    #[cfg_attr(not(feature="debug_full_ct"), debug(ignore))]
+    #[cfg_attr(not(feature = "debug_full_ct"), debug(ignore))]
     table: &'static std::collections::HashMap<Register, RegisterData>,
 }
 
@@ -34,7 +34,7 @@ impl ControlTable {
         ControlTable {
             model: Some(model),
             model_group,
-            table
+            table,
         }
     }
 
@@ -98,9 +98,9 @@ impl core::fmt::Display for ControlTable {
 #[cfg(test)]
 #[cfg(feature = "serde")]
 mod test {
+    use super::*;
     use dynamixel_registers::models::Model::{XM430_W210, XM430_W350};
     use dynamixel_registers::models::ModelGroup::XM430;
-    use super::*;
 
     #[test]
     fn test_serde_json() {
@@ -135,4 +135,3 @@ mod test {
         assert_eq!(model.model, ModelOrModelGroup::ModelGroup(XM430));
     }
 }
-

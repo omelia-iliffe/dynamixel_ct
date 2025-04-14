@@ -1,17 +1,17 @@
-use std::collections::{BTreeMap, BTreeSet};
 use anyhow::{anyhow, Context};
-use dynamixel_registers::Register;
-use regex::Regex;
 use convert_case::{Case, Casing};
-use std::path::Path;
-use std::fs;
 use dynamixel_registers::models::Model as DModel;
 use dynamixel_registers::models::ModelGroup as DModelGroup;
-use std::cmp::Ordering;
+use dynamixel_registers::Register;
 use itertools::Itertools;
-use std::ops::Not;
-use std::str::FromStr;
 use num_traits::FromPrimitive;
+use regex::Regex;
+use std::cmp::Ordering;
+use std::collections::{BTreeMap, BTreeSet};
+use std::fs;
+use std::ops::Not;
+use std::path::Path;
+use std::str::FromStr;
 
 #[derive(Debug, Clone, Default)]
 pub struct ModelGroup {
@@ -90,7 +90,11 @@ impl PartialOrd for ControlTableRow {
 }
 
 impl ControlTableRow {
-    fn parse(header: &str, row: &str, area: Option<&str>) -> anyhow::Result<Option<ControlTableRow>> {
+    fn parse(
+        header: &str,
+        row: &str,
+        area: Option<&str>,
+    ) -> anyhow::Result<Option<ControlTableRow>> {
         let mut cells = header
             .split("|")
             .zip(row.split("|"))
@@ -247,10 +251,7 @@ pub fn parse_table(model_file: impl AsRef<Path>) -> anyhow::Result<Model> {
         DModel::from_u16(model_number)
             .ok_or_else(|| anyhow!("cannot find model for {} = {},", name, model_number))?,
     );
-    let model = Model {
-        model,
-        table,
-    };
+    let model = Model { model, table };
 
     Ok(model)
 }

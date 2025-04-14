@@ -1,13 +1,13 @@
-mod parse;
 mod generate;
+mod parse;
 
 use anyhow::{anyhow, Context, Result};
 use itertools::Itertools;
+use parse::ModelGroup;
 use std::fs;
 use std::ops::Not;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use parse::ModelGroup;
 
 fn main() -> Result<()> {
     if Path::new("emanual").exists().not() {
@@ -106,4 +106,3 @@ fn collect_model_files(
         .map_ok(|d| d.into_path());
     r
 }
-
