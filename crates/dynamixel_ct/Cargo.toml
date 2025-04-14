@@ -24,7 +24,8 @@ dynamixel_registers = {workspace = true}
 serde = { workspace = true, features = ["derive"], optional = true }
 strum = { workspace = true, features = ["derive"], optional = true }
 derive_more = { workspace = true, features = ["debug"] }
-paste = "1.0.15"
+pastey = {version = "0.1.0"}
+
 
 [dev-dependencies]
 serde_json = "1"

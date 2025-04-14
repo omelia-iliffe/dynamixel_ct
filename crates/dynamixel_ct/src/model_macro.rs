@@ -5,12 +5,12 @@
 /// It creates a static HashMap of RegisterData for each register in the model.
 macro_rules! model {
     (@BASE_MODEL {$($reg:ident : $addr:expr, $len:expr,)+}) => {
-        paste::paste!{
+        pastey::paste!{
             #[cfg(feature = "std")]
             pub(crate) static TABLE: std::sync::LazyLock<std::collections::HashMap<Register, RegisterData>> = std::sync::LazyLock::new(|| {
                 [
                     $(
-                        (Register::$reg, [<base_ $reg:snake>]()),
+                        (Register::$reg, [<BASE_ $reg:snake:upper>]),
                     )+
                 ].iter().cloned().collect()
             });
@@ -18,24 +18,24 @@ macro_rules! model {
             const fn base_get(register: Register) -> Option<RegisterData> {
                 match register {
                     $(
-                        Register::$reg => Some([<base_ $reg:snake>]()),
+                        Register::$reg => Some([<BASE_ $reg:snake:upper>]),
                     )+
                     _ => None,
                 }
             }
 
             $(
-                const fn [< base_ $reg:snake>] () -> RegisterData {
+                const [< BASE_ $reg:snake:upper>]: RegisterData =
                     RegisterData {
                         address: $addr,
                         length: $len,
-                    }
-                }
+                    };
+
             )+
         }
     };
     (@MODEL $model:ident {$($reg:ident : $addr:expr, $len:expr,)+}) => {
-        paste::paste! {
+        pastey::paste! {
             #[doc = "The Control Table for the " $model " models."]
             pub struct $model;
 
@@ -52,10 +52,10 @@ macro_rules! model {
                 }
 
                 $(
-                    #[doc = "returns the [`RegisterData`] for [`Register::" $reg "`]"]
-                    pub const fn [<$reg:snake>]() -> RegisterData {
-                        [<base_ $reg:snake>]()
-                    }
+                    #[doc = "[`RegisterData`] for [`Register::" $reg "`]"]
+                    pub const [<$reg:snake:upper>]: RegisterData = {
+                        [<BASE_ $reg:snake:upper>]
+                    };
                 )+
             }
         }

@@ -13,9 +13,9 @@
 //! println!("{:?}", XM430::get(Register::GoalCurrent));
 //! println!("{:?}", XM430::get(Register::GoalVelocity));
 //! // or
-//! println!("{:?}", XM430::goal_position());
-//! println!("{:?}", XM430::goal_current());
-//! println!("{:?}", XM430::goal_velocity());
+//! println!("{:?}", XM430::GOAL_POSITION);
+//! println!("{:?}", XM430::GOAL_CURRENT);
+//! println!("{:?}", XM430::GOAL_VELOCITY);
 //! ```
 //!
 //! ### Example
