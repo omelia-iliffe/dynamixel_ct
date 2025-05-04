@@ -55,6 +55,7 @@ pub enum ModelGroup {
     XW540,
     YM070,
     YM080,
+    YM110,
 }
 
 impl ModelGroup {
@@ -142,6 +143,8 @@ pub enum Model {
     YM080_230_R099_RH = 4150,
     YM080_230_A051_RH = 4160,
     YM080_230_A099_RH = 4170,
+
+    YM110_TEMP = 4270,
 }
 
 impl Model {
@@ -168,6 +171,7 @@ impl Model {
             PH54_100_S500_R | PH54_200_S500_R => ModelGroup::PH54,
             PM42_010_S260_R => ModelGroup::PM42,
             PM54_040_S250_R | PM54_060_S250_R => ModelGroup::PM54,
+            YM110_TEMP => ModelGroup::YM110,
         }
     }
 }

@@ -51,6 +51,7 @@ pub(crate) fn control_table_from_model_group(
         ModelGroup::XW540 => XW540::table(),
         ModelGroup::YM070 => YM070::table(),
         ModelGroup::YM080 => YM080::table(),
+        ModelGroup::YM110 => YM080::table(),
         _ => panic!("unknown model group"),
     }
 }
@@ -79,6 +80,7 @@ pub(crate) fn indirect_address_blocks_from_model_group(
         ModelGroup::XW540 => XW540::indirect_address_blocks(),
         ModelGroup::YM070 => YM070::indirect_address_blocks(),
         ModelGroup::YM080 => YM080::indirect_address_blocks(),
+        ModelGroup::YM110 => YM080::indirect_address_blocks(),
         _ => &[],
     }
 }
@@ -107,6 +109,7 @@ pub(crate) fn indirect_data_blocks_from_model_group(
         ModelGroup::XW540 => XW540::indirect_data_blocks(),
         ModelGroup::YM070 => YM070::indirect_data_blocks(),
         ModelGroup::YM080 => YM080::indirect_data_blocks(),
+        ModelGroup::YM110 => YM080::indirect_data_blocks(),
         _ => &[],
     }
 }
@@ -162,6 +165,7 @@ pub fn position_resolution(model: dynamixel_registers::models::Model) -> u32 {
         Model::YM080_230_R099_RH => 51904512,
         Model::YM080_230_A051_RH => 26738688,
         Model::YM080_230_A099_RH => 51904512,
+        Model::YM110_TEMP => 524288,
         _ => panic!("no resolution for model {model}"),
     }
 }
