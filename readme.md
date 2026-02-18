@@ -10,7 +10,7 @@ The data for register is currently limited to address and size (length), however
 The library can be used to return a control table when the model number is not known at compile time,
 allowing for a more dynamic approach to working with servos.
 
-If the Dynamixel model doesn't implement a register, the control table will return `None`.
+If the Dynamixel model doesn't implement a register, the control table will return `RegisterError`.
 
 ## Supported Servos
 This crate focuses on Dynamixels that use Protocol2.0.  
@@ -46,6 +46,11 @@ fn main() {
     /// Output: Some(RegisterData { address: 116, length: 4 })
 }
 ```
+
+## Generation
+These Control Tables are scraped from [Robotics Emanual](https://emanual.robotis.com/) using the **generate_control_tables** crate.
+When run, this binary clones the emanual repo, scapes the control table data, and generates the files in `dynamixel_ct/src/models/`.
+The scraping process is a little complicated due in inconsistencies in the html tables but it should be maintainable.
 
 
 ## Other Dynamixel Rust Libraries
