@@ -1,9 +1,10 @@
+use derive_more::From;
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::{FromPrimitive, ToPrimitive};
 #[cfg(feature = "serde")]
 use std::str::FromStr;
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, derive_more::Display, Ord, PartialOrd)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, derive_more::Display, Ord, PartialOrd, From)]
 #[repr(u16)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "serde", serde(untagged))]

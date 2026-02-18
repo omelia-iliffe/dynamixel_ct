@@ -2,9 +2,28 @@
 //!
 //! The control table is statically allocated to reduce memory usage.
 //!
+use derive_more::{Display, Error};
 use dynamixel_registers::models::{Model, ModelGroup, ModelOrModelGroup};
 use dynamixel_registers::Register;
 use dynamixel_registers::RegisterData;
+
+#[derive(Clone, Debug, Display, Error, PartialEq, PartialOrd)]
+#[display("{} does not have {} register", model_or_group, register)]
+/// The `ControlTable` doesn't contain the `Register` requested
+pub struct RegisterError {
+    model_or_group: ModelOrModelGroup,
+    register: Register,
+}
+
+impl RegisterError {
+    fn new(model: Option<Model>, model_group: ModelGroup, register: Register) -> Self {
+        let model_or_group = model.map_or(model_group.into(), Into::into);
+        Self {
+            model_or_group,
+            register,
+        }
+    }
+}
 
 /// A control table for a specific model.
 /// The table is statically allocated to reduce memory usage.
@@ -49,8 +68,10 @@ impl ControlTable {
     }
 
     /// Get the register data for a specific register.
-    pub fn get(&self, register: Register) -> Option<&RegisterData> {
-        self.table.get(&register)
+    pub fn get(&self, register: Register) -> Result<&RegisterData, RegisterError> {
+        self.table
+            .get(&register)
+            .ok_or_else(|| RegisterError::new(self.model, self.model_group, register))
     }
 }
 
@@ -97,7 +118,7 @@ impl core::fmt::Display for ControlTable {
 
 #[cfg(test)]
 #[cfg(feature = "serde")]
-mod test {
+mod serde_tests {
     use super::*;
     use dynamixel_registers::models::Model::{XM430_W210, XM430_W350};
     use dynamixel_registers::models::ModelGroup::XM430;
@@ -133,5 +154,28 @@ mod test {
 
         let model: Test = toml::from_str("model = \"XM430\"").unwrap();
         assert_eq!(model.model, ModelOrModelGroup::ModelGroup(XM430));
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use dynamixel_registers::{models::Model, Register};
+
+    use crate::control_table::RegisterError;
+    use crate::ControlTable;
+
+    #[test]
+    fn test_register_error() {
+        let model = Model::YM070_210_M001_RH;
+        let register = Register::PresentTemperature;
+        let control_table = ControlTable::new_with_model(model);
+
+        assert_eq!(
+            control_table
+                .get(register)
+                .inspect_err(|e| println!("{e}"))
+                .unwrap_err(),
+            RegisterError::new(Some(model), model.into(), register)
+        );
     }
 }

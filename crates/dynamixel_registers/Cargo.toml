@@ -10,7 +10,7 @@ description = "The models and registers of Dynamixels supported by the dynamixel
 [dependencies]
 num-derive = "0.4"
 num-traits = { version = "0.2", default-features = false }
-derive_more = { workspace = true, features = ["display", "error"] }
+derive_more = { workspace = true, features = ["display", "error", "from"] }
 serde = { workspace = true, optional = true, features = ["derive"] }
 strum = { workspace = true, features = ["strum_macros", "derive"], optional = true }
 
