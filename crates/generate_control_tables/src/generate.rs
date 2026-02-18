@@ -5,6 +5,25 @@ use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
+pub fn mod_path_header(mod_path: &PathBuf) -> anyhow::Result<()> {
+    let mut mod_file = fs::OpenOptions::new()
+        .append(true)
+        .create(true)
+        .open(mod_path)?;
+    writeln!(
+        mod_file,
+        "
+
+//! The Control Tables for all supported models.
+//! These structs can be used with `no_std`
+
+            
+        "
+    )?;
+
+    Ok(())
+}
+
 pub fn create_match(mod_path: &PathBuf, all_models: Vec<ModelGroup>) -> anyhow::Result<()> {
     let mut mod_file = fs::OpenOptions::new()
         .append(true)
@@ -12,6 +31,7 @@ pub fn create_match(mod_path: &PathBuf, all_models: Vec<ModelGroup>) -> anyhow::
         .open(mod_path)?;
 
     writeln!(mod_file)?;
+    writeln!(mod_file, r#"#[cfg(feature = "std")]"#)?;
     writeln!(mod_file, "pub(crate) fn control_table_from_model(model: &dynamixel_registers::models::Model) -> &'static std::collections::HashMap<dynamixel_registers::Register, dynamixel_registers::RegisterData> {{")?;
     writeln!(mod_file, "    use dynamixel_registers::models::Model::*;")?;
     writeln!(mod_file, "    match model {{")?;
@@ -25,9 +45,11 @@ pub fn create_match(mod_path: &PathBuf, all_models: Vec<ModelGroup>) -> anyhow::
             )?;
         }
     }
+    writeln!(mod_file, r#"        _ => panic!("unknown model")"#)?;
     writeln!(mod_file, "    }}")?;
     writeln!(mod_file, "}}")?;
     writeln!(mod_file)?;
+    writeln!(mod_file, r#"#[cfg(feature = "std")]"#)?;
     writeln!(mod_file, "pub(crate) fn control_table_from_model_group(model_group: &dynamixel_registers::models::ModelGroup) -> &'static std::collections::HashMap<dynamixel_registers::Register, dynamixel_registers::RegisterData> {{")?;
     writeln!(mod_file, "    use dynamixel_registers::models::ModelGroup;")?;
     writeln!(mod_file, "    match model_group {{")?;
@@ -40,13 +62,18 @@ pub fn create_match(mod_path: &PathBuf, all_models: Vec<ModelGroup>) -> anyhow::
             )?;
         }
     }
+    writeln!(mod_file, r#"        _ => panic!("unknown model group")"#)?;
     writeln!(mod_file, "    }}")?;
     writeln!(mod_file, "}}")?;
     Ok(())
 }
 
 fn to_model_macro_from_group(file: &mut File, model_group: &ModelGroup) -> anyhow::Result<()> {
-    writeln!(file, "//! Dynamixel XM430 model definitions.")?;
+    writeln!(
+        file,
+        "//! Dynamixel {} model definitions.",
+        model_group.alias().keys().join(" ")
+    )?;
     writeln!(file)?;
     writeln!(file, "use crate::model;")?;
     writeln!(file)?;
@@ -59,7 +86,11 @@ fn to_model_macro_from_group(file: &mut File, model_group: &ModelGroup) -> anyho
     )?;
 
     for row in model_group.table().values() {
-        writeln!(file, "   {}: {}, {},", row.data_name, row.address, row.size,)?;
+        writeln!(
+            file,
+            "    {}: {}, {},",
+            row.data_name, row.address, row.size,
+        )?;
     }
 
     writeln!(file, "}}];")?;

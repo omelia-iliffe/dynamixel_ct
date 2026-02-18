@@ -111,11 +111,20 @@ impl ControlTableRow {
             })
         };
 
+        /// handle wierd double model cases like this: 4,030<br />4,031<sup>1)</sup>
+        fn handle_double_model(cell: String) -> String {
+            if !cell.contains("<br") {
+                return cell;
+            }
+            // split and take only the string before
+            cell.split_once("<br").unwrap().0.to_string()
+        }
+
         let address = find("address").unwrap();
         let size = find("size").unwrap();
         let data_name = find("data").unwrap();
         let access = find("access").unwrap();
-        let initial_value = find("initial").unwrap();
+        let initial_value = handle_double_model(find("initial").unwrap());
         let range = find("range").unwrap().replace("<br>", " ").replace(",", "");
         let unit = find("unit").unwrap();
         let area = find("area")

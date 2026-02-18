@@ -56,9 +56,8 @@ fn main() -> Result<()> {
     fs::remove_dir_all(&generate_path).ok();
     let mod_path = generate_path.join("mod.rs");
 
-    if fs::exists(&mod_path)? {
-        fs::remove_file(&mod_path)?;
-    }
+    fs::create_dir_all(&generate_path)?;
+    generate::mod_path_header(&mod_path)?;
 
     all_models.clone().into_iter().try_for_each(|model| {
         let path = generate_path.join(format!("{}.rs", model.file_name()));
@@ -68,6 +67,11 @@ fn main() -> Result<()> {
     })?;
 
     generate::create_match(&mod_path, all_models)?;
+
+    let mut fmt = Command::new("cargo").arg("fmt").spawn()?;
+    if !fmt.wait()?.success() {
+        panic!("cargo fmt failed")
+    }
 
     Ok(())
 }
