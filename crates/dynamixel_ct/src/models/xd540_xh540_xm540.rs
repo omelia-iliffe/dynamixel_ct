@@ -1,3 +1,5 @@
+//! Dynamixel XD540 XH540 XM540 model definitions.
+
 use crate::model;
 
 model![XD540 XH540 XM540 => {

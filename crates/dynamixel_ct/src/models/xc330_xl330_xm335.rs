@@ -1,6 +1,8 @@
+//! Dynamixel XC330 XL330 XM335 model definitions.
+
 use crate::model;
 
-model![XC330 XL330 => {
+model![XC330 XL330 XM335 => {
     ModelNumber: 0, 2,
     ModelInformation: 2, 4,
     FirmwareVersion: 6, 1,

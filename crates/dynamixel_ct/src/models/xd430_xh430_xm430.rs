@@ -1,3 +1,5 @@
+//! Dynamixel XD430 XH430 XM430 model definitions.
+
 use crate::model;
 
 model![XD430 XH430 XM430 => {

@@ -49,6 +49,7 @@ pub enum ModelGroup {
     XH540,
     XL330,
     XL430,
+    XM335,
     XM430,
     XM540,
     XW540,
@@ -119,6 +120,8 @@ pub enum Model {
 
     XW540_H260 = 1310,
 
+    XM335_T323 = 1701,
+
     PH42_020_S300_R = 2000,
     PH54_100_S500_R = 2010,
     PH54_200_S500_R = 2020,
@@ -155,6 +158,7 @@ impl Model {
             XL330_M077 | XL330_M288 => ModelGroup::XL330,
             XD430_T350 | XD430_T210 => ModelGroup::XD430,
             XH430_W350 | XH430_W210 | XH430_V350 | XH430_V210 => ModelGroup::XH430,
+            XM335_T323 => ModelGroup::XM335,
             XM430_W350 | XM430_W210 => ModelGroup::XM430,
             YM070_210_M001_RH | YM070_210_B001_RH | YM070_200_R051_RH | YM070_200_R099_RH
             | YM070_210_A051_RH | YM070_200_A099_RH => ModelGroup::YM070,

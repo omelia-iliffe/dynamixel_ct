@@ -1,3 +1,5 @@
+//! Dynamixel PH42 PH54 PM42 PM54 model definitions.
+
 use crate::model;
 
 model![PH42 PH54 PM42 PM54 => {

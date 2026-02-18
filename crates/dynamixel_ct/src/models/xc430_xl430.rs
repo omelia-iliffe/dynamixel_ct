@@ -1,3 +1,5 @@
+//! Dynamixel XC430 XL430 model definitions.
+
 use crate::model;
 
 model![XC430 XL430 => {

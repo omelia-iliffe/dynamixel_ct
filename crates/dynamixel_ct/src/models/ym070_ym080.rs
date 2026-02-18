@@ -1,3 +1,5 @@
+//! Dynamixel YM070 YM080 model definitions.
+
 use crate::model;
 
 model![YM070 YM080 => {
