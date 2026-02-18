@@ -50,6 +50,7 @@ pub(crate) fn control_table_from_model(
     }
 }
 
+#[cfg(feature = "std")]
 pub(crate) fn control_table_from_model_group(
     model_group: &dynamixel_registers::models::ModelGroup,
 ) -> &'static std::collections::HashMap<
