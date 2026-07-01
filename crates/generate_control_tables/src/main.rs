@@ -63,14 +63,14 @@ fn main() -> Result<()> {
     fs::create_dir_all(&generate_path)?;
     generate::mod_path_header(&mod_path)?;
 
-    all_models.clone().into_iter().try_for_each(|model| {
+    all_models.iter().try_for_each(|model| {
         let path = generate_path.join(format!("{}.rs", model.file_name()));
 
         generate::write_file_model_group(&mod_path, &path, model)?;
         anyhow::Ok(())
     })?;
 
-    generate::create_match(&mod_path, all_models)?;
+    generate::create_match(&mod_path, &all_models)?;
 
     let mut fmt = Command::new("cargo").arg("fmt").spawn()?;
     if !fmt.wait()?.success() {

@@ -12,6 +12,12 @@ use std::fs;
 use std::ops::Not;
 use std::path::Path;
 use std::str::FromStr;
+use std::sync::LazyLock;
+
+/// Extracts the text of a markdown link: `[Name](#anchor)` -> `Name`.
+static LINK_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\[(.+)]").unwrap());
+/// Matches a parenthesised qualifier to strip, e.g. the `(Shadow)` in `Secondary(Shadow) ID`.
+static PARENS_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\(.*\)").unwrap());
 
 #[derive(Debug, Clone, Default)]
 pub struct ModelGroup {
@@ -119,7 +125,7 @@ impl ControlTableRow {
 
         /// Strip trailing markup from a cell, keeping only the text before the first tag.
         /// Handles weird multi-value cells like `4,030<br />4,031<sup>1)</sup>`.
-        fn handle_double_model(cell: String) -> String {
+        fn text_before_markup(cell: String) -> String {
             match cell.split_once('<') {
                 Some((before, _)) => before.trim().to_string(),
                 None => cell,
@@ -130,7 +136,7 @@ impl ControlTableRow {
         let size = find("size").unwrap();
         let data_name = find("data").unwrap();
         let access = find("access").unwrap();
-        let initial_value = handle_double_model(find("initial").unwrap());
+        let initial_value = text_before_markup(find("initial").unwrap());
         let range = find("range").unwrap().replace("<br>", " ").replace(",", "");
         let unit = find("unit").unwrap();
         let area = find("area")
@@ -139,17 +145,16 @@ impl ControlTableRow {
 
         // Data names are usually markdown links `[Name](#anchor)`, but some rows
         // (e.g. `Model Information`) are plain text, so fall back to the raw cell.
-        let mut data_name = match Regex::new(r"\[(.+)]").unwrap().captures(&data_name) {
-            Some(caps) => caps.get(1).unwrap().as_str().to_string(),
-            None => data_name.clone(),
-        };
+        let mut data_name = LINK_RE
+            .captures(&data_name)
+            .map(|caps| caps[1].to_string())
+            .unwrap_or(data_name);
 
-        if data_name.contains("(") {
-            let re = Regex::new(r"\(.*\)").expect("tested");
-            data_name = re.replace(data_name.as_str(), "").to_string();
+        if data_name.contains('(') {
+            data_name = PARENS_RE.replace(&data_name, "").to_string();
         }
 
-        let data_name = match data_name.to_string().to_case(Case::Pascal).parse() {
+        let data_name = match data_name.to_case(Case::Pascal).parse() {
             Ok(data_name) => data_name,
             Err(e) => {
                 println!("error parsing {}: {}", data_name, e);

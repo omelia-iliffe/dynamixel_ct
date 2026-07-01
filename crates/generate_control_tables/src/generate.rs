@@ -24,7 +24,7 @@ pub fn mod_path_header(mod_path: &PathBuf) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn create_match(mod_path: &PathBuf, all_models: Vec<ModelGroup>) -> anyhow::Result<()> {
+pub fn create_match(mod_path: &PathBuf, all_models: &[ModelGroup]) -> anyhow::Result<()> {
     let mut mod_file = fs::OpenOptions::new()
         .append(true)
         .create(true)
@@ -35,7 +35,7 @@ pub fn create_match(mod_path: &PathBuf, all_models: Vec<ModelGroup>) -> anyhow::
     writeln!(mod_file, "pub(crate) fn control_table_from_model(model: &dynamixel_registers::models::Model) -> &'static std::collections::HashMap<dynamixel_registers::Register, dynamixel_registers::RegisterData> {{")?;
     writeln!(mod_file, "    use dynamixel_registers::models::Model::*;")?;
     writeln!(mod_file, "    match model {{")?;
-    for group in &all_models {
+    for group in all_models {
         for (alias, models) in group.alias() {
             writeln!(
                 mod_file,
@@ -53,7 +53,7 @@ pub fn create_match(mod_path: &PathBuf, all_models: Vec<ModelGroup>) -> anyhow::
     writeln!(mod_file, "pub(crate) fn control_table_from_model_group(model_group: &dynamixel_registers::models::ModelGroup) -> &'static std::collections::HashMap<dynamixel_registers::Register, dynamixel_registers::RegisterData> {{")?;
     writeln!(mod_file, "    use dynamixel_registers::models::ModelGroup;")?;
     writeln!(mod_file, "    match model_group {{")?;
-    for group in &all_models {
+    for group in all_models {
         for alias in group.alias().keys() {
             writeln!(
                 mod_file,
@@ -100,7 +100,7 @@ fn to_model_macro_from_group(file: &mut File, model_group: &ModelGroup) -> anyho
 pub fn write_file_model_group(
     mod_path: impl AsRef<Path>,
     file_path: impl AsRef<Path>,
-    model: ModelGroup,
+    model: &ModelGroup,
 ) -> anyhow::Result<()> {
     let file_path = file_path.as_ref();
     let folder = file_path.parent().unwrap();
@@ -115,7 +115,7 @@ pub fn write_file_model_group(
         model.table_name(),
         file_path.display()
     );
-    to_model_macro_from_group(&mut file, &model)?;
+    to_model_macro_from_group(&mut file, model)?;
 
     let mod_path = mod_path.as_ref();
 
