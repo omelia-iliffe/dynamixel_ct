@@ -48,9 +48,9 @@ fn main() {
 ```
 
 ## Generation
-These Control Tables are scraped from [Robotics Emanual](https://emanual.robotis.com/) using the **generate_control_tables** crate.
-When run, this binary clones the emanual repo, scapes the control table data, and generates the files in `dynamixel_ct/src/models/`.
-The scraping process is a little complicated due in inconsistencies in the html tables but it should be maintainable.
+These Control Tables are scraped from the [ROBOTIS Docs](https://github.com/ROBOTIS-GIT/docs) using the **generate_control_tables** crate.
+When run, this binary clones the docs repo, scapes the control table data, and generates the files in `dynamixel_ct/src/models/`.
+The scraping process is a little complicated due in inconsistencies in the markdown tables but it should be maintainable.
 
 
 ## Other Dynamixel Rust Libraries
