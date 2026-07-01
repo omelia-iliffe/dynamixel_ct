@@ -102,22 +102,28 @@ impl ControlTableRow {
             .collect_vec();
         _ = cells.pop(); //remove last empty cell
 
-        let find = |pattern| -> Option<String> {
-            cells.iter().find_map(|(header, cell)| {
-                header
-                    .to_lowercase()
-                    .contains(pattern)
-                    .then_some(cell.trim().to_string())
-            })
+        // Match the column by header. Prefer an exact header match, falling back to a
+        // substring match. The exact pass is needed because the new docs add a
+        // `_Modbus_ Address` column that would otherwise be caught by the `address` lookup.
+        let find = |pattern: &str| -> Option<String> {
+            cells
+                .iter()
+                .find(|(header, _)| header.trim().to_lowercase() == pattern)
+                .or_else(|| {
+                    cells
+                        .iter()
+                        .find(|(header, _)| header.to_lowercase().contains(pattern))
+                })
+                .map(|(_, cell)| cell.trim().to_string())
         };
 
-        /// handle wierd double model cases like this: 4,030<br />4,031<sup>1)</sup>
+        /// Strip trailing markup from a cell, keeping only the text before the first tag.
+        /// Handles weird multi-value cells like `4,030<br />4,031<sup>1)</sup>`.
         fn handle_double_model(cell: String) -> String {
-            if !cell.contains("<br") {
-                return cell;
+            match cell.split_once('<') {
+                Some((before, _)) => before.trim().to_string(),
+                None => cell,
             }
-            // split and take only the string before
-            cell.split_once("<br").unwrap().0.to_string()
         }
 
         let address = find("address").unwrap();
@@ -131,14 +137,12 @@ impl ControlTableRow {
             .or_else(|| area.map(|s| s.to_string()))
             .ok_or(anyhow!("missing area"))?;
 
-        let mut data_name = Regex::new(r"\[(.+)]")
-            .unwrap()
-            .captures(&data_name)
-            .context(anyhow!("failed to parse data name: {}", &data_name))?
-            .get(1)
-            .unwrap()
-            .as_str()
-            .to_string();
+        // Data names are usually markdown links `[Name](#anchor)`, but some rows
+        // (e.g. `Model Information`) are plain text, so fall back to the raw cell.
+        let mut data_name = match Regex::new(r"\[(.+)]").unwrap().captures(&data_name) {
+            Some(caps) => caps.get(1).unwrap().as_str().to_string(),
+            None => data_name.clone(),
+        };
 
         if data_name.contains("(") {
             let re = Regex::new(r"\(.*\)").expect("tested");
@@ -256,10 +260,13 @@ pub fn parse_table(model_file: impl AsRef<Path>) -> anyhow::Result<Model> {
         .to_string()
         .to_uppercase()
         .replace("-", "_");
-    let model = DModel::from_str(&name).unwrap_or(
-        DModel::from_u16(model_number)
-            .ok_or_else(|| anyhow!("cannot find model for {} = {},", name, model_number))?,
-    );
+    // Resolve by name first (the filename maps directly to a variant), falling back to
+    // the model number from the table. Done lazily so a name match still wins if the
+    // table's model number ever disagrees with the enum.
+    let model = DModel::from_str(&name)
+        .ok()
+        .or_else(|| DModel::from_u16(model_number))
+        .ok_or_else(|| anyhow!("cannot find model for {} = {},", name, model_number))?;
     let model = Model { model, table };
 
     Ok(model)

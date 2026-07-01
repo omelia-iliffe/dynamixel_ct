@@ -10,14 +10,14 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 fn main() -> Result<()> {
-    if Path::new("emanual").exists().not() {
-        clone_emanual()?
+    if Path::new("docs").exists().not() {
+        clone_docs()?
     }
 
     let dirs = [
-        "emanual/docs/en/dxl/x",
-        "emanual/docs/en/dxl/y",
-        "emanual/docs/en/dxl/p",
+        "docs/docusaurus/docs/dxl/model_reference/x_series",
+        "docs/docusaurus/docs/dxl/model_reference/y_series",
+        "docs/docusaurus/docs/dxl/model_reference/p_series",
     ];
 
     let all_model_files: Vec<_> = dirs.iter().flat_map(collect_model_files).try_collect()?;
@@ -45,6 +45,10 @@ fn main() -> Result<()> {
             all_models.push(mg);
         }
     }
+
+    // Sort groups by name so the generated `mod` declarations and match arms are
+    // deterministic and independent of filesystem traversal order.
+    all_models.sort_by(|a, b| a.name().cmp(&b.name()));
 
     for mg in &all_models {
         println!("model_group: {:?}", mg.name());
@@ -77,28 +81,51 @@ fn main() -> Result<()> {
 }
 
 fn filter_files(path: impl AsRef<Path>) -> bool {
-    let path = path.as_ref().to_str().unwrap();
-    let filter = ["test", "xl320", "2x", "xw430", "x.md", "dxl_p.md", "y.md"];
-    filter.iter().any(|f| path.contains(f)).not()
+    let path = path.as_ref();
+    // only model pages
+    if path.extension().and_then(|e| e.to_str()) != Some("mdx") {
+        return false;
+    }
+    let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+    // skip series index pages (`*_series.mdx`) and models this crate doesn't support:
+    // the `2x` dual servos, `xl320` (protocol 1.0), `xw430`, and the `xc430-*bb` variants.
+    let filter = ["_series", "xl320", "2x", "xw430", "bb"];
+    filter.iter().any(|f| name.contains(f)).not()
 }
 
-fn clone_emanual() -> Result<()> {
-    let clone = Command::new("git")
-        .args([
-            "clone",
-            "https://github.com/ROBOTIS-GIT/emanual.git",
-            "--depth",
-            "1",
-        ])
-        .spawn()
-        .context("failed to spawn git clone")?
-        .wait()
-        .context("failed to wait on git clone")?;
-    if clone.success().not() {
-        Err(anyhow!("failed to clone repo"))
-    } else {
-        Ok(())
-    }
+fn clone_docs() -> Result<()> {
+    // The docs repo carries large image assets, so do a blobless, sparse clone that
+    // only materialises the control-table model pages.
+    let run = |args: &[&str]| -> Result<()> {
+        let status = Command::new("git")
+            .args(args)
+            .spawn()
+            .with_context(|| anyhow!("failed to spawn git {:?}", args))?
+            .wait()
+            .with_context(|| anyhow!("failed to wait on git {:?}", args))?;
+        status
+            .success()
+            .then_some(())
+            .ok_or_else(|| anyhow!("git {:?} failed", args))
+    };
+
+    run(&[
+        "clone",
+        "--filter=blob:none",
+        "--no-checkout",
+        "--depth",
+        "1",
+        "https://github.com/ROBOTIS-GIT/docs.git",
+    ])?;
+    run(&[
+        "-C",
+        "docs",
+        "sparse-checkout",
+        "set",
+        "docusaurus/docs/dxl/model_reference",
+    ])?;
+    run(&["-C", "docs", "checkout"])?;
+    Ok(())
 }
 
 fn collect_model_files(
