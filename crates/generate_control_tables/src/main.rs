@@ -31,14 +31,20 @@ fn main() -> Result<()> {
         })
         .try_collect()?;
 
+    // Per-variant tables with exact units, for model groups whose members disagree on a
+    // unit (the shared group table drops those to `None`). Computed before grouping
+    // consumes `models`.
+    let separated = parse::separated_tables(&models);
+
     let mut all_models: Vec<ModelGroup> = Vec::new();
 
     for m in models {
         if let Some(mg) = all_models.iter_mut().find(|mg| {
             println!("comparing {} with {}", mg.name(), m.model);
-            mg.table() == &m.table
+            mg.table_compatible(&m.table)
         }) {
             mg.insert_model(m.model);
+            mg.merge(m.table);
         } else {
             let mut mg = ModelGroup::new(m.table);
             mg.insert_model(m.model);
@@ -48,7 +54,7 @@ fn main() -> Result<()> {
 
     // Sort groups by name so the generated `mod` declarations and match arms are
     // deterministic and independent of filesystem traversal order.
-    all_models.sort_by(|a, b| a.name().cmp(&b.name()));
+    all_models.sort_by_key(|mg| mg.name());
 
     for mg in &all_models {
         println!("model_group: {:?}", mg.name());
@@ -64,11 +70,13 @@ fn main() -> Result<()> {
     generate::mod_path_header(&mod_path)?;
 
     all_models.iter().try_for_each(|model| {
-        let path = generate_path.join(format!("{}.rs", model.file_name()));
-
-        generate::write_file_model_group(&mod_path, &path, model)?;
+        generate::write_file_model_group(&mod_path, &generate_path, model)?;
         anyhow::Ok(())
     })?;
+
+    for sep in &separated {
+        generate::write_separated_table(&mod_path, &generate_path, sep)?;
+    }
 
     generate::create_match(&mod_path, &all_models)?;
 

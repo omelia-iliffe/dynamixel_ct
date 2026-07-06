@@ -1,5 +1,7 @@
-use crate::parse::ModelGroup;
+use crate::parse::{ControlTableRow, ModelGroup, SeparatedTable};
+use dynamixel_registers::Register;
 use itertools::Itertools;
+use std::collections::BTreeMap;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
@@ -50,65 +52,89 @@ pub fn create_match(mod_path: &PathBuf, all_models: &[ModelGroup]) -> anyhow::Re
     Ok(())
 }
 
-fn to_model_macro_from_group(file: &mut File, model_group: &ModelGroup) -> anyhow::Result<()> {
-    writeln!(
-        file,
-        "//! Dynamixel {} model definitions.",
-        model_group.alias().keys().join(" ")
-    )?;
+/// Write a `model![<struct_names> => { .. }]` file for the given control table.
+/// `struct_names` is the space-separated list of structs to define (one for a per-variant
+/// table, several for a shared model-group table).
+fn emit_model_file(
+    file: &mut File,
+    struct_names: &str,
+    table: &BTreeMap<Register, ControlTableRow>,
+) -> anyhow::Result<()> {
+    writeln!(file, "//! Dynamixel {struct_names} model definitions.")?;
     writeln!(file)?;
     writeln!(file, "use crate::model;")?;
     writeln!(file)?;
-
     writeln!(file)?;
-    writeln!(
-        file,
-        "model![{} => {{",
-        model_group.alias().keys().join(" ")
-    )?;
-
-    for row in model_group.table().values() {
+    writeln!(file, "model![{struct_names} => {{")?;
+    for row in table.values() {
+        let unit = match row.unit {
+            Some(u) => format!("Some(UnitScale::new(Unit::{:?}, {}f32))", u.unit, u.scale),
+            None => "None".to_string(),
+        };
         writeln!(
             file,
-            "    {}: {}, {},",
-            row.data_name, row.address, row.size,
+            "    {}: {}, {}, {},",
+            row.data_name, row.address, row.size, unit,
         )?;
     }
-
     writeln!(file, "}}];")?;
+    Ok(())
+}
+
+/// Create `<dir>/<stem>.rs` containing the model table, and register it in `mod.rs`.
+fn write_table_file(
+    mod_path: impl AsRef<Path>,
+    dir: impl AsRef<Path>,
+    stem: &str,
+    struct_names: &str,
+    table: &BTreeMap<Register, ControlTableRow>,
+) -> anyhow::Result<()> {
+    let dir = dir.as_ref();
+    fs::create_dir_all(dir)?;
+    let file_path = dir.join(format!("{stem}.rs"));
+    println!("writing {struct_names} to file {}", file_path.display());
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(&file_path)?;
+    emit_model_file(&mut file, struct_names, table)?;
+
+    let mut mod_file = fs::OpenOptions::new()
+        .append(true)
+        .create(true)
+        .open(mod_path.as_ref())?;
+    writeln!(mod_file, "mod {stem};")?;
+    writeln!(mod_file, "pub use {stem}::*;")?;
     Ok(())
 }
 
 pub fn write_file_model_group(
     mod_path: impl AsRef<Path>,
-    file_path: impl AsRef<Path>,
+    dir: impl AsRef<Path>,
     model: &ModelGroup,
 ) -> anyhow::Result<()> {
-    let file_path = file_path.as_ref();
-    let folder = file_path.parent().unwrap();
-    fs::create_dir_all(folder)?;
-    let mut file = fs::OpenOptions::new()
-        .write(true)
-        .create(true)
-        .truncate(true)
-        .open(file_path)?;
-    println!(
-        "writing model {} to file {}",
-        model.table_name(),
-        file_path.display()
-    );
-    to_model_macro_from_group(&mut file, model)?;
+    let struct_names = model.alias().keys().join(" ");
+    write_table_file(
+        mod_path,
+        dir,
+        &model.file_name(),
+        &struct_names,
+        model.table(),
+    )
+}
 
-    let mod_path = mod_path.as_ref();
-
-    let folder = mod_path.parent().unwrap();
-    fs::create_dir_all(folder)?;
-    let mut mod_file = fs::OpenOptions::new()
-        .append(true)
-        .create(true)
-        .open(mod_path)?;
-    writeln!(mod_file, "mod {};", model.file_name())?;
-    writeln!(mod_file, "pub use {}::*;", model.file_name())?;
-
-    Ok(())
+/// Write a standalone per-variant table (e.g. `XH430V`) with its exact units.
+pub fn write_separated_table(
+    mod_path: impl AsRef<Path>,
+    dir: impl AsRef<Path>,
+    separated: &SeparatedTable,
+) -> anyhow::Result<()> {
+    write_table_file(
+        mod_path,
+        dir,
+        &separated.name.to_lowercase(),
+        &separated.name,
+        &separated.table,
+    )
 }

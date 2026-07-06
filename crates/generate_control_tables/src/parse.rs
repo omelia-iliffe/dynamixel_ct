@@ -2,11 +2,10 @@ use anyhow::{anyhow, Context};
 use convert_case::{Case, Casing};
 use dynamixel_registers::models::Model as DModel;
 use dynamixel_registers::models::ModelGroup as DModelGroup;
-use dynamixel_registers::Register;
+use dynamixel_registers::{Register, Unit, UnitScale};
 use itertools::Itertools;
 use num_traits::FromPrimitive;
 use regex::Regex;
-use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::ops::Not;
@@ -18,6 +17,61 @@ use std::sync::LazyLock;
 static LINK_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\[(.+)]").unwrap());
 /// Matches a parenthesised qualifier to strip, e.g. the `(Shadow)` in `Secondary(Shadow) ID`.
 static PARENS_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\(.*\)").unwrap());
+/// Splits a unit cell like `0.229 [rev/min]` into the leading scale and the bracketed unit.
+static UNIT_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\s*([0-9.]+)?\s*\[\s*([^\]]+?)\s*\]").unwrap());
+
+/// Parse a unit-column cell into a normalised base [`UnitScale`].
+///
+/// The docs give the unit as `<scale> [<unit>]`, e.g. `2.69 [mA]`. Metric prefixes
+/// are folded into the scale so each physical quantity has one base unit
+/// (`2.69 [mA]` -> `Ampere`, scale `0.00269`). Cells with no bracketed unit and
+/// scale (`-`, `R`, `1/R`) yield `None`; dual-mode cells keep the primary unit.
+fn parse_unit(cell: &str) -> Option<UnitScale> {
+    let cell = cell.split("<br").next().unwrap_or(cell);
+    let cell = cell
+        .replace('\\', "")
+        .replace("<sup>", "")
+        .replace("</sup>", "");
+    let caps = UNIT_RE.captures(&cell)?;
+    // Fold in f64 and cast once, so e.g. 2.69 mA yields a clean 0.00269 rather than
+    // the f32 round-off (0.0026900002) that repeated f32 arithmetic would produce.
+    let number: Option<f64> = caps.get(1).and_then(|m| m.as_str().parse().ok());
+    let raw = caps.get(2).unwrap().as_str();
+
+    let tok = raw
+        .to_lowercase()
+        .replace(' ', "")
+        .replace(['\u{00b5}', '\u{03bc}'], "u") // µ micro sign / μ greek mu
+        .replace('²', "2");
+
+    let (unit, mult) = if raw.contains("deg") || raw.contains('°') || raw.contains('℃') {
+        (Unit::DegreesCelsius, 1.0)
+    } else {
+        match tok.as_str() {
+            "pulse" => (Unit::Pulse, 1.0),
+            "rev/min" => (Unit::RevPerMinute, 1.0),
+            "rev/min2" => (Unit::RevPerMinuteSquared, 1.0),
+            "pulse/ms" => (Unit::PulsePerMillisecond, 1.0),
+            "pulse/s" => (Unit::PulsePerSecond, 1.0),
+            "v" => (Unit::Volt, 1.0),
+            "%" => (Unit::Percent, 1.0),
+            "ma" => (Unit::Ampere, 1e-3),
+            "a" => (Unit::Ampere, 1.0),
+            "hz" => (Unit::Hertz, 1.0),
+            "usec" | "us" => (Unit::Second, 1e-6),
+            "ms" | "msec" => (Unit::Second, 1e-3),
+            "sec" | "s" => (Unit::Second, 1.0),
+            "mv/msec" | "mv/ms" => (Unit::VoltPerSecond, 1.0),
+            other => {
+                println!("unknown unit: {:?}", other);
+                return None;
+            }
+        }
+    };
+    let scale = (number? * mult) as f32;
+    Some(UnitScale::new(unit, scale))
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct ModelGroup {
@@ -44,10 +98,25 @@ impl ModelGroup {
     pub(crate) fn table(&self) -> &BTreeMap<Register, ControlTableRow> {
         &self.table
     }
-    pub(crate) fn table_name(&self) -> String {
-        self.name().to_uppercase()
+
+    /// Whether `other` describes the same control table as this group (same registers,
+    /// each row [compatible](ControlTableRow::compatible)).
+    pub(crate) fn table_compatible(&self, other: &BTreeMap<Register, ControlTableRow>) -> bool {
+        self.table.len() == other.len()
+            && self
+                .table
+                .iter()
+                .all(|(reg, row)| other.get(reg).is_some_and(|o| row.compatible(o)))
     }
 
+    /// Fold another (compatible) table in, reconciling each row's unit.
+    pub(crate) fn merge(&mut self, other: BTreeMap<Register, ControlTableRow>) {
+        for (reg, o) in other {
+            if let Some(row) = self.table.get_mut(&reg) {
+                row.merge(&o);
+            }
+        }
+    }
     pub(crate) fn file_name(&self) -> String {
         self.name().to_lowercase()
     }
@@ -61,46 +130,48 @@ impl ModelGroup {
     }
 }
 
-#[derive(Debug, Clone, Eq)]
-#[expect(dead_code)]
+#[derive(Debug, Clone)]
 pub(crate) struct ControlTableRow {
     pub(crate) address: u16,
     pub(crate) size: u16,
     pub(crate) data_name: Register,
     access: String,
     initial_value: Option<i32>,
-    range: String,
-    unit: String,
-    area: String,
+    pub(crate) unit: Option<UnitScale>,
+    /// Set once two grouped models disagree on this register's unit; keeps [`Self::unit`]
+    /// dropped so a later matching model can't resurrect a conflicted value.
+    conflicted: bool,
 }
 
-impl PartialEq for ControlTableRow {
-    fn eq(&self, other: &Self) -> bool {
+impl ControlTableRow {
+    /// Whether two rows describe the same register in a shareable table: identical
+    /// address, size, name and access. Units are reconciled separately by [`merge`].
+    fn compatible(&self, other: &Self) -> bool {
         self.address == other.address
             && self.size == other.size
             && self.data_name == other.data_name
             && self.access == other.access
     }
-}
 
-impl Ord for ControlTableRow {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.address.cmp(&other.address)
-    }
-}
-
-impl PartialOrd for ControlTableRow {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.address.cmp(&other.address))
+    /// Fold another model's row for the same register into this one, keeping a unit only
+    /// while every model agrees on it. Order-independent: once conflicted it stays dropped.
+    fn merge(&mut self, other: &Self) {
+        if self.conflicted {
+            return;
+        }
+        match (self.unit, other.unit) {
+            (Some(a), Some(b)) if a != b => {
+                self.unit = None;
+                self.conflicted = true;
+            }
+            (None, Some(_)) => self.unit = other.unit,
+            _ => {}
+        }
     }
 }
 
 impl ControlTableRow {
-    fn parse(
-        header: &str,
-        row: &str,
-        area: Option<&str>,
-    ) -> anyhow::Result<Option<ControlTableRow>> {
+    fn parse(header: &str, row: &str) -> anyhow::Result<Option<ControlTableRow>> {
         let mut cells = header
             .split("|")
             .zip(row.split("|"))
@@ -137,11 +208,7 @@ impl ControlTableRow {
         let data_name = find("data").unwrap();
         let access = find("access").unwrap();
         let initial_value = text_before_markup(find("initial").unwrap());
-        let range = find("range").unwrap().replace("<br>", " ").replace(",", "");
-        let unit = find("unit").unwrap();
-        let area = find("area")
-            .or_else(|| area.map(|s| s.to_string()))
-            .ok_or(anyhow!("missing area"))?;
+        let unit = parse_unit(&find("unit").unwrap_or_default());
 
         // Data names are usually markdown links `[Name](#anchor)`, but some rows
         // (e.g. `Model Information`) are plain text, so fall back to the raw cell.
@@ -183,9 +250,8 @@ impl ControlTableRow {
             data_name,
             access,
             initial_value,
-            range,
             unit,
-            area,
+            conflicted: false,
         }))
     }
 }
@@ -205,9 +271,7 @@ pub fn parse_table(model_file: impl AsRef<Path>) -> anyhow::Result<Model> {
         .ok_or(anyhow!("error parsing file name"))?;
     let file = fs::read_to_string(model_file)?;
 
-    let parse_table = |start: &str,
-                       area: Option<&str>|
-     -> anyhow::Result<BTreeMap<Register, ControlTableRow>> {
+    let parse_table = |start: &str| -> anyhow::Result<BTreeMap<Register, ControlTableRow>> {
         let (start, _) = file
             .lines()
             .find_position(|p| p.to_lowercase().contains(&start.to_lowercase()))
@@ -224,7 +288,7 @@ pub fn parse_table(model_file: impl AsRef<Path>) -> anyhow::Result<Model> {
                 !r.contains("…") && !r.contains("···") && !r.contains("...") && !r.contains("N/A")
             })
             .flat_map(|r| {
-                ControlTableRow::parse(header, r, area)
+                ControlTableRow::parse(header, r)
                     .with_context(|| anyhow!("failed to parse row {}", r))
                     .transpose()
             })
@@ -234,14 +298,14 @@ pub fn parse_table(model_file: impl AsRef<Path>) -> anyhow::Result<Model> {
 
     let try_double_table =
         || -> anyhow::Result<(BTreeMap<Register, ControlTableRow>, BTreeMap<Register, ControlTableRow>)> {
-            let eeprom = parse_table("Control Table of EEPROM Area", Some("EEPROM"))?;
+            let eeprom = parse_table("Control Table of EEPROM Area")?;
 
-            let ram = parse_table("Control Table of RAM Area", Some("RAM"))?;
+            let ram = parse_table("Control Table of RAM Area")?;
             Ok((eeprom, ram))
         };
 
     let table = match try_double_table() {
-        Err(e) => parse_table("Control Table", None)
+        Err(e) => parse_table("Control Table")
             .with_context(|| e)
             .with_context(|| anyhow!("failed to parse double table and single table"))?,
         Ok((mut eeprom, mut ram)) => {
@@ -275,4 +339,102 @@ pub fn parse_table(model_file: impl AsRef<Path>) -> anyhow::Result<Model> {
     let model = Model { model, table };
 
     Ok(model)
+}
+
+/// A per-variant control table exposed as a standalone struct (e.g. `XH430V`), for
+/// models whose exact units are dropped from the shared model-group table.
+pub struct SeparatedTable {
+    pub name: String,
+    pub table: BTreeMap<Register, ControlTableRow>,
+}
+
+/// Build the separated (exact-unit) tables: for any model group whose members genuinely
+/// disagree on a register's unit, split that group's models by their exact table and emit
+/// one entry per partition, named from the models' common prefix (`XH430_V*` -> `XH430V`).
+///
+/// Groups with no such conflict are skipped — their shared table already carries the
+/// correct units, so no extra struct is needed.
+pub fn separated_tables(models: &[Model]) -> Vec<SeparatedTable> {
+    let mut by_alias: BTreeMap<DModelGroup, Vec<&Model>> = BTreeMap::new();
+    for m in models {
+        by_alias.entry(m.model.model_group()).or_default().push(m);
+    }
+
+    let mut out = Vec::new();
+    for alias_models in by_alias.into_values() {
+        if !has_unit_conflict(&alias_models) {
+            continue;
+        }
+        // Partition by exact-unit compatibility (equal, or blank on either side).
+        let mut subs: Vec<(Vec<DModel>, BTreeMap<Register, ControlTableRow>)> = Vec::new();
+        for m in alias_models {
+            match subs.iter_mut().find(|(_, t)| unit_compatible(t, &m.table)) {
+                Some((members, table)) => {
+                    members.push(m.model);
+                    for (reg, row) in &m.table {
+                        if let Some(existing) = table.get_mut(reg) {
+                            existing.merge(row);
+                        }
+                    }
+                }
+                None => subs.push((vec![m.model], m.table.clone())),
+            }
+        }
+        for (members, table) in subs {
+            out.push(SeparatedTable {
+                name: common_prefix_name(&members),
+                table,
+            });
+        }
+    }
+    out
+}
+
+/// Whether any register carries two different (present) units across these models.
+fn has_unit_conflict(models: &[&Model]) -> bool {
+    let mut seen: BTreeMap<Register, UnitScale> = BTreeMap::new();
+    for m in models {
+        for (reg, row) in &m.table {
+            if let Some(us) = row.unit {
+                match seen.get(reg) {
+                    Some(prev) if *prev != us => return true,
+                    Some(_) => {}
+                    None => {
+                        seen.insert(*reg, us);
+                    }
+                }
+            }
+        }
+    }
+    false
+}
+
+/// Two tables are unit-compatible when they cover the same registers and no register has
+/// a *conflicting* unit (a blank on either side is fine); addresses etc. must match.
+fn unit_compatible(
+    a: &BTreeMap<Register, ControlTableRow>,
+    b: &BTreeMap<Register, ControlTableRow>,
+) -> bool {
+    a.len() == b.len()
+        && a.iter().all(|(reg, ra)| {
+            b.get(reg).is_some_and(|rb| {
+                ra.compatible(rb) && !matches!((ra.unit, rb.unit), (Some(x), Some(y)) if x != y)
+            })
+        })
+}
+
+/// The uppercase common prefix of the model names, underscores removed
+/// (`XH430_V210` + `XH430_V350` -> `XH430V`).
+fn common_prefix_name(models: &[DModel]) -> String {
+    let names: Vec<String> = models.iter().map(|m| m.to_string()).collect();
+    let first = &names[0];
+    let end = names[1..].iter().fold(first.len(), |end, n| {
+        first
+            .chars()
+            .zip(n.chars())
+            .take_while(|(a, b)| a == b)
+            .count()
+            .min(end)
+    });
+    first[..end].replace('_', "")
 }
