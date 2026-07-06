@@ -4,9 +4,13 @@
 /// The [`model!`] macro is used to define the control table for a specific model.
 /// It creates a static HashMap of RegisterData for each register in the model.
 macro_rules! model {
-    (@BASE_MODEL {$($reg:ident : $addr:expr, $len:expr,)+}) => {
+    (@BASE_MODEL {$($reg:ident : $addr:expr, $len:expr, $unit:expr,)+}) => {
         pastey::paste!{
+            // `table()`/`TABLE` back the dynamic `ControlTable` lookup, which only reaches
+            // the model-group structs; the per-variant structs are used statically, so
+            // their generated table accessor is legitimately unused.
             #[cfg(feature = "std")]
+            #[allow(dead_code)]
             pub(crate) static TABLE: std::sync::LazyLock<std::collections::HashMap<Register, RegisterData>> = std::sync::LazyLock::new(|| {
                 [
                     $(
@@ -26,15 +30,12 @@ macro_rules! model {
 
             $(
                 const [< BASE_ $reg:snake:upper>]: RegisterData =
-                    RegisterData {
-                        address: $addr,
-                        length: $len,
-                    };
+                    RegisterData::new($addr, $len, $unit);
 
             )+
         }
     };
-    (@MODEL $model:ident {$($reg:ident : $addr:expr, $len:expr,)+}) => {
+    (@MODEL $model:ident {$($reg:ident : $addr:expr, $len:expr, $unit:expr,)+}) => {
         pastey::paste! {
             #[doc = "The Control Table for the " $model " models."]
             pub struct $model;
@@ -42,6 +43,7 @@ macro_rules! model {
             impl $model {
 
                 #[cfg(feature = "std")]
+                #[allow(dead_code)]
                 pub(crate) fn table() -> &'static std::collections::HashMap<Register, RegisterData> {
                     &*TABLE
                 }
@@ -64,6 +66,8 @@ macro_rules! model {
     ($($model:ident)+ => $registers:tt  ) => {
         use $crate::RegisterData;
         use $crate::Register;
+        #[allow(unused_imports)]
+        use $crate::{Unit, UnitScale};
         model!(@BASE_MODEL $registers);
 
         $(

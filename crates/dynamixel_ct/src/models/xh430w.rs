@@ -1,8 +1,8 @@
-//! Dynamixel XD540 XH540 XM540 model definitions.
+//! Dynamixel XH430W model definitions.
 
 use crate::model;
 
-model![XD540 XH540 XM540 => {
+model![XH430W => {
     ModelNumber: 0, 2, None,
     ModelInformation: 2, 4, None,
     FirmwareVersion: 6, 1, None,
@@ -53,13 +53,7 @@ model![XD540 XH540 XM540 => {
     PositionDGain: 80, 2, None,
     PositionIGain: 82, 2, None,
     ProtocolType: 13, 1, None,
-    ExternalPortMode1: 56, 1, None,
-    ExternalPortMode2: 57, 1, None,
-    ExternalPortMode3: 58, 1, None,
     Feedforward2NdGain: 88, 2, None,
     Feedforward1StGain: 90, 2, None,
     RealtimeTick: 120, 2, Some(UnitScale::new(Unit::Second, 0.001f32)),
-    ExternalPortData1: 152, 2, None,
-    ExternalPortData2: 154, 2, None,
-    ExternalPortData3: 156, 2, None,
 }];

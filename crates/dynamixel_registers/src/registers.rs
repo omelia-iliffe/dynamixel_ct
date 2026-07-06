@@ -1,13 +1,71 @@
 //! This module defines the RegisterData struct and each possible register in the control table.
 
-/// RegisterData is used to store the address and length of register.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+/// The physical unit a register's value is expressed in.
+///
+/// Units are normalised to a single base unit per physical quantity, with any
+/// metric prefix folded into [`RegisterData::unit_scale`] (e.g. a `mA` value
+/// becomes [`Unit::Ampere`] with the scale multiplied by `0.001`).
+#[allow(missing_docs)]
+#[derive(Clone, Copy, Eq, PartialEq, Debug, Hash, Ord, PartialOrd, derive_more::Display)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize, strum::EnumString)
+)]
+pub enum Unit {
+    Pulse,
+    RevPerMinute,
+    RevPerMinuteSquared,
+    PulsePerSecond,
+    PulsePerMillisecond,
+    Percent,
+    Ampere,
+    Volt,
+    VoltPerSecond,
+    DegreesCelsius,
+    Second,
+    Hertz,
+}
+
+/// A register's physical unit together with the scale factor applied to its raw value.
+#[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct UnitScale {
+    /// The base physical unit of the scaled value.
+    pub unit: Unit,
+    /// Multiply the raw register value by this to get the value in [`unit`](Self::unit).
+    pub scale: f32,
+}
+
+impl UnitScale {
+    /// Create a new [`UnitScale`].
+    pub const fn new(unit: Unit, scale: f32) -> Self {
+        Self { unit, scale }
+    }
+}
+
+/// RegisterData is used to store the address, length and unit of a register.
+#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[non_exhaustive]
 pub struct RegisterData {
     /// The address of the register
     pub address: u16,
     /// The number of bytes in the register
     pub length: u16,
+    /// The unit and scale of the register's value, if it represents a physical quantity
+    /// (and is unambiguous across every model sharing this control table).
+    pub unit: Option<UnitScale>,
+}
+
+impl RegisterData {
+    /// Create a new [`RegisterData`].
+    pub const fn new(address: u16, length: u16, unit: Option<UnitScale>) -> Self {
+        Self {
+            address,
+            length,
+            unit,
+        }
+    }
 }
 
 #[allow(missing_docs)]

@@ -1,8 +1,8 @@
-//! Dynamixel XD540 XH540 XM540 model definitions.
+//! Dynamixel XH430V model definitions.
 
 use crate::model;
 
-model![XD540 XH540 XM540 => {
+model![XH430V => {
     ModelNumber: 0, 2, None,
     ModelInformation: 2, 4, None,
     FirmwareVersion: 6, 1, None,
@@ -18,7 +18,7 @@ model![XD540 XH540 XM540 => {
     MaxVoltageLimit: 32, 2, Some(UnitScale::new(Unit::Volt, 0.1f32)),
     MinVoltageLimit: 34, 2, Some(UnitScale::new(Unit::Volt, 0.1f32)),
     PwmLimit: 36, 2, Some(UnitScale::new(Unit::Percent, 0.113f32)),
-    CurrentLimit: 38, 2, Some(UnitScale::new(Unit::Ampere, 0.00269f32)),
+    CurrentLimit: 38, 2, Some(UnitScale::new(Unit::Ampere, 0.00134f32)),
     VelocityLimit: 44, 4, Some(UnitScale::new(Unit::RevPerMinute, 0.229f32)),
     MaxPositionLimit: 48, 4, Some(UnitScale::new(Unit::Pulse, 1f32)),
     MinPositionLimit: 52, 4, Some(UnitScale::new(Unit::Pulse, 1f32)),
@@ -34,7 +34,7 @@ model![XD540 XH540 XM540 => {
     PositionPGain: 84, 2, None,
     BusWatchdog: 98, 1, Some(UnitScale::new(Unit::Second, 0.02f32)),
     GoalPwm: 100, 2, Some(UnitScale::new(Unit::Percent, 0.113f32)),
-    GoalCurrent: 102, 2, Some(UnitScale::new(Unit::Ampere, 0.00269f32)),
+    GoalCurrent: 102, 2, Some(UnitScale::new(Unit::Ampere, 0.00134f32)),
     GoalVelocity: 104, 4, Some(UnitScale::new(Unit::RevPerMinute, 0.229f32)),
     ProfileAcceleration: 108, 4, Some(UnitScale::new(Unit::RevPerMinuteSquared, 214.577f32)),
     ProfileVelocity: 112, 4, Some(UnitScale::new(Unit::RevPerMinute, 0.229f32)),
@@ -42,7 +42,7 @@ model![XD540 XH540 XM540 => {
     Moving: 122, 1, None,
     MovingStatus: 123, 1, None,
     PresentPwm: 124, 2, None,
-    PresentCurrent: 126, 2, Some(UnitScale::new(Unit::Ampere, 0.00269f32)),
+    PresentCurrent: 126, 2, Some(UnitScale::new(Unit::Ampere, 0.00134f32)),
     PresentVelocity: 128, 4, Some(UnitScale::new(Unit::RevPerMinute, 0.229f32)),
     PresentPosition: 132, 4, Some(UnitScale::new(Unit::Pulse, 1f32)),
     VelocityTrajectory: 136, 4, Some(UnitScale::new(Unit::RevPerMinute, 0.229f32)),
@@ -53,13 +53,7 @@ model![XD540 XH540 XM540 => {
     PositionDGain: 80, 2, None,
     PositionIGain: 82, 2, None,
     ProtocolType: 13, 1, None,
-    ExternalPortMode1: 56, 1, None,
-    ExternalPortMode2: 57, 1, None,
-    ExternalPortMode3: 58, 1, None,
     Feedforward2NdGain: 88, 2, None,
     Feedforward1StGain: 90, 2, None,
     RealtimeTick: 120, 2, Some(UnitScale::new(Unit::Second, 0.001f32)),
-    ExternalPortData1: 152, 2, None,
-    ExternalPortData2: 154, 2, None,
-    ExternalPortData3: 156, 2, None,
 }];

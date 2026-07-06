@@ -27,7 +27,7 @@ impl RegisterError {
 
 /// A control table for a specific model.
 /// The table is statically allocated to reduce memory usage.
-#[derive(PartialEq, Eq, Clone, derive_more::Debug)]
+#[derive(PartialEq, Clone, derive_more::Debug)]
 pub struct ControlTable {
     model: Option<Model>,
     model_group: ModelGroup,

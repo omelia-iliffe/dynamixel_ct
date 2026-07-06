@@ -41,6 +41,6 @@ pub mod models;
 #[cfg(feature = "std")]
 pub use control_table::ControlTable;
 pub use dynamixel_registers::models::{Model, ModelGroup, ModelOrModelGroup};
-pub use dynamixel_registers::{Register, RegisterData};
+pub use dynamixel_registers::{Register, RegisterData, Unit, UnitScale};
 
 pub(crate) use model_macro::model;

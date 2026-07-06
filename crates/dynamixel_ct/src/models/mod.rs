@@ -15,6 +15,14 @@ mod xw540;
 pub use xw540::*;
 mod ym070_ym080;
 pub use ym070_ym080::*;
+mod xc330t;
+pub use xc330t::*;
+mod xc330m;
+pub use xc330m::*;
+mod xh430w;
+pub use xh430w::*;
+mod xh430v;
+pub use xh430v::*;
 
 #[cfg(feature = "std")]
 pub(crate) fn control_table_from_model_group(
