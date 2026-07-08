@@ -2,7 +2,7 @@ use anyhow::{anyhow, Context};
 use convert_case::{Case, Casing};
 use dynamixel_registers::models::Model as DModel;
 use dynamixel_registers::models::ModelGroup as DModelGroup;
-use dynamixel_registers::{Register, Unit, UnitScale};
+use dynamixel_registers::{Access, Area, Register, Unit, UnitScale};
 use itertools::Itertools;
 use num_traits::FromPrimitive;
 use regex::Regex;
@@ -73,6 +73,25 @@ fn parse_unit(cell: &str) -> Option<UnitScale> {
     Some(UnitScale::new(unit, scale))
 }
 
+/// Parse the Access column (`R` / `RW`) into an [`Access`].
+fn parse_access(cell: &str) -> Access {
+    if cell.to_lowercase().contains('w') {
+        Access::Rw
+    } else {
+        Access::R
+    }
+}
+
+/// Parse the Area column (`EEPROM` / `RAM`) into an [`Area`], if present.
+fn parse_area(cell: &str) -> Option<Area> {
+    match cell.to_uppercase().as_str() {
+        "EEPROM" => Some(Area::Eeprom),
+        "RAM" => Some(Area::Ram),
+        "HYBRID" => Some(Area::Hybrid),
+        _ => None,
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct ModelGroup {
     model: BTreeSet<DModel>,
@@ -135,7 +154,8 @@ pub(crate) struct ControlTableRow {
     pub(crate) address: u16,
     pub(crate) size: u16,
     pub(crate) data_name: Register,
-    access: String,
+    pub(crate) access: Access,
+    pub(crate) area: Area,
     initial_value: Option<i32>,
     pub(crate) unit: Option<UnitScale>,
     /// Set once two grouped models disagree on this register's unit; keeps [`Self::unit`]
@@ -145,12 +165,13 @@ pub(crate) struct ControlTableRow {
 
 impl ControlTableRow {
     /// Whether two rows describe the same register in a shareable table: identical
-    /// address, size, name and access. Units are reconciled separately by [`merge`].
+    /// address, size, name, access and area. Units are reconciled separately by [`merge`].
     fn compatible(&self, other: &Self) -> bool {
         self.address == other.address
             && self.size == other.size
             && self.data_name == other.data_name
             && self.access == other.access
+            && self.area == other.area
     }
 
     /// Fold another model's row for the same register into this one, keeping a unit only
@@ -171,7 +192,11 @@ impl ControlTableRow {
 }
 
 impl ControlTableRow {
-    fn parse(header: &str, row: &str) -> anyhow::Result<Option<ControlTableRow>> {
+    fn parse(
+        header: &str,
+        row: &str,
+        area: Option<Area>,
+    ) -> anyhow::Result<Option<ControlTableRow>> {
         let mut cells = header
             .split("|")
             .zip(row.split("|"))
@@ -206,7 +231,13 @@ impl ControlTableRow {
         let address = find("address").unwrap();
         let size = find("size").unwrap();
         let data_name = find("data").unwrap();
-        let access = find("access").unwrap();
+        let access = parse_access(&find("access").unwrap_or_default());
+        // Area comes from the table's own column when present (single-table models),
+        // otherwise from the EEPROM/RAM section the row was found in.
+        let area = find("area")
+            .and_then(|a| parse_area(&a))
+            .or(area)
+            .unwrap_or(Area::Ram);
         let initial_value = text_before_markup(find("initial").unwrap());
         let unit = parse_unit(&find("unit").unwrap_or_default());
 
@@ -249,6 +280,7 @@ impl ControlTableRow {
                 .with_context(|| anyhow!("failed to parse size {}", size))?,
             data_name,
             access,
+            area,
             initial_value,
             unit,
             conflicted: false,
@@ -271,7 +303,9 @@ pub fn parse_table(model_file: impl AsRef<Path>) -> anyhow::Result<Model> {
         .ok_or(anyhow!("error parsing file name"))?;
     let file = fs::read_to_string(model_file)?;
 
-    let parse_table = |start: &str| -> anyhow::Result<BTreeMap<Register, ControlTableRow>> {
+    let parse_table = |start: &str,
+                       area: Option<Area>|
+     -> anyhow::Result<BTreeMap<Register, ControlTableRow>> {
         let (start, _) = file
             .lines()
             .find_position(|p| p.to_lowercase().contains(&start.to_lowercase()))
@@ -288,7 +322,7 @@ pub fn parse_table(model_file: impl AsRef<Path>) -> anyhow::Result<Model> {
                 !r.contains("…") && !r.contains("···") && !r.contains("...") && !r.contains("N/A")
             })
             .flat_map(|r| {
-                ControlTableRow::parse(header, r)
+                ControlTableRow::parse(header, r, area)
                     .with_context(|| anyhow!("failed to parse row {}", r))
                     .transpose()
             })
@@ -298,14 +332,14 @@ pub fn parse_table(model_file: impl AsRef<Path>) -> anyhow::Result<Model> {
 
     let try_double_table =
         || -> anyhow::Result<(BTreeMap<Register, ControlTableRow>, BTreeMap<Register, ControlTableRow>)> {
-            let eeprom = parse_table("Control Table of EEPROM Area")?;
+            let eeprom = parse_table("Control Table of EEPROM Area", Some(Area::Eeprom))?;
 
-            let ram = parse_table("Control Table of RAM Area")?;
+            let ram = parse_table("Control Table of RAM Area", Some(Area::Ram))?;
             Ok((eeprom, ram))
         };
 
     let table = match try_double_table() {
-        Err(e) => parse_table("Control Table")
+        Err(e) => parse_table("Control Table", None)
             .with_context(|| e)
             .with_context(|| anyhow!("failed to parse double table and single table"))?,
         Ok((mut eeprom, mut ram)) => {

@@ -73,8 +73,8 @@ fn emit_model_file(
         };
         writeln!(
             file,
-            "    {}: {}, {}, {},",
-            row.data_name, row.address, row.size, unit,
+            "    {}: {}, {}, Access::{:?}, Area::{:?}, {},",
+            row.data_name, row.address, row.size, row.access, row.area, unit,
         )?;
     }
     writeln!(file, "}}];")?;

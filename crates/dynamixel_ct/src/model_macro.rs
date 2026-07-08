@@ -4,7 +4,7 @@
 /// The [`model!`] macro is used to define the control table for a specific model.
 /// It creates a static HashMap of RegisterData for each register in the model.
 macro_rules! model {
-    (@BASE_MODEL {$($reg:ident : $addr:expr, $len:expr, $unit:expr,)+}) => {
+    (@BASE_MODEL {$($reg:ident : $addr:expr, $len:expr, $access:expr, $area:expr, $unit:expr,)+}) => {
         pastey::paste!{
             // `table()`/`TABLE` back the dynamic `ControlTable` lookup, which only reaches
             // the model-group structs; the per-variant structs are used statically, so
@@ -30,12 +30,12 @@ macro_rules! model {
 
             $(
                 const [< BASE_ $reg:snake:upper>]: RegisterData =
-                    RegisterData::new($addr, $len, $unit);
+                    RegisterData::new($addr, $len, $access, $area, $unit);
 
             )+
         }
     };
-    (@MODEL $model:ident {$($reg:ident : $addr:expr, $len:expr, $unit:expr,)+}) => {
+    (@MODEL $model:ident {$($reg:ident : $addr:expr, $len:expr, $access:expr, $area:expr, $unit:expr,)+}) => {
         pastey::paste! {
             #[doc = "The Control Table for the " $model " models."]
             pub struct $model;
@@ -67,7 +67,7 @@ macro_rules! model {
         use $crate::RegisterData;
         use $crate::Register;
         #[allow(unused_imports)]
-        use $crate::{Unit, UnitScale};
+        use $crate::{Access, Area, Unit, UnitScale};
         model!(@BASE_MODEL $registers);
 
         $(

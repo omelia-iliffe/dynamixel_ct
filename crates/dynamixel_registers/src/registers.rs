@@ -11,6 +11,7 @@
     feature = "serde",
     derive(serde::Serialize, serde::Deserialize, strum::EnumString)
 )]
+#[non_exhaustive]
 pub enum Unit {
     Pulse,
     RevPerMinute,
@@ -24,6 +25,36 @@ pub enum Unit {
     DegreesCelsius,
     Second,
     Hertz,
+}
+
+/// Whether a register can be written, or is read-only.
+#[derive(Clone, Copy, Eq, PartialEq, Debug, Hash, Ord, PartialOrd, derive_more::Display)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize, strum::EnumString)
+)]
+pub enum Access {
+    /// Read only.
+    R,
+    /// Read and write.
+    Rw,
+}
+
+/// The control-table memory area a register lives in.
+#[derive(Clone, Copy, Eq, PartialEq, Debug, Hash, Ord, PartialOrd, derive_more::Display)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize, strum::EnumString)
+)]
+pub enum Area {
+    /// Non-volatile memory: persists across power cycles, and requires torque to be
+    /// disabled before it can be written.
+    Eeprom,
+    /// Volatile memory: reset to the register's initial value on power-up.
+    Ram,
+    /// Writable like RAM, but its value can be persisted to non-volatile memory via the
+    /// Hybrid Save instruction (Y series).
+    Hybrid,
 }
 
 /// A register's physical unit together with the scale factor applied to its raw value.
@@ -52,6 +83,10 @@ pub struct RegisterData {
     pub address: u16,
     /// The number of bytes in the register
     pub length: u16,
+    /// Whether the register is read-only or writable.
+    pub access: Access,
+    /// The memory area the register lives in.
+    pub area: Area,
     /// The unit and scale of the register's value, if it represents a physical quantity
     /// (and is unambiguous across every model sharing this control table).
     pub unit: Option<UnitScale>,
@@ -59,10 +94,18 @@ pub struct RegisterData {
 
 impl RegisterData {
     /// Create a new [`RegisterData`].
-    pub const fn new(address: u16, length: u16, unit: Option<UnitScale>) -> Self {
+    pub const fn new(
+        address: u16,
+        length: u16,
+        access: Access,
+        area: Area,
+        unit: Option<UnitScale>,
+    ) -> Self {
         Self {
             address,
             length,
+            access,
+            area,
             unit,
         }
     }
