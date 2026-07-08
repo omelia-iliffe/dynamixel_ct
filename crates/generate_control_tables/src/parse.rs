@@ -20,6 +20,9 @@ static PARENS_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\(.*\)").unwra
 /// Splits a unit cell like `0.229 [rev/min]` into the leading scale and the bracketed unit.
 static UNIT_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^\s*([0-9.]+)?\s*\[\s*([^\]]+?)\s*\]").unwrap());
+/// Matches an indirect register row: `Indirect Address 1` / `Indirect Data 12`.
+static INDIRECT_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"Indirect\s+(Address|Data)\s*(\d+)").unwrap());
 
 /// Parse a unit-column cell into a normalised base [`UnitScale`].
 ///
@@ -92,18 +95,138 @@ fn parse_area(cell: &str) -> Option<Area> {
     }
 }
 
+/// One of the two families of indirect registers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IndirectKind {
+    Address,
+    Data,
+}
+
+/// A single indirect-register row scraped from a table (the docs elide the middle of each
+/// block, so these are just samples from which the block layout is inferred).
+struct IndirectSample {
+    kind: IndirectKind,
+    index: u16,
+    address: u16,
+    size: u16,
+}
+
+/// A contiguous run of indirect registers: index `first_index..=last_index` map to
+/// `base + (index - first_index) * size`.
+#[derive(Debug, Clone, Copy)]
+pub struct IndirectSegment {
+    pub first_index: u16,
+    pub last_index: u16,
+    pub base: u16,
+}
+
+/// The full layout of one indirect-register family (address or data) for a model, made up
+/// of one or more [`IndirectSegment`]s (X models split their block in two).
+#[derive(Debug, Clone)]
+pub struct IndirectBlock {
+    pub kind: IndirectKind,
+    pub size: u16,
+    pub segments: Vec<IndirectSegment>,
+}
+
+/// Collect indirect-register samples from every table row in the file. Independent of the
+/// [`Register`] parse, since indirect registers are not enumerated as [`Register`]s.
+fn parse_indirect(file: &str) -> Vec<IndirectSample> {
+    let mut out = Vec::new();
+    for line in file.lines() {
+        if !line.trim_start().starts_with('|') {
+            continue;
+        }
+        let Some(caps) = INDIRECT_RE.captures(line) else {
+            continue;
+        };
+        let kind = if &caps[1] == "Address" {
+            IndirectKind::Address
+        } else {
+            IndirectKind::Data
+        };
+        let index: u16 = caps[2].parse().unwrap();
+        let cells: Vec<&str> = line
+            .trim()
+            .trim_matches('|')
+            .split('|')
+            .map(str::trim)
+            .collect();
+        // Address and Size are the first two numeric cells (any Modbus address comes later).
+        let nums: Vec<u16> = cells.iter().filter_map(|c| c.parse::<u16>().ok()).collect();
+        let (Some(&address), Some(&size)) = (nums.first(), nums.get(1)) else {
+            continue;
+        };
+        out.push(IndirectSample {
+            kind,
+            index,
+            address,
+            size,
+        });
+    }
+    out
+}
+
+/// Infer the [`IndirectBlock`]s (one per family) from sparse samples, splitting into
+/// segments wherever the address stops following the `base + (index - first) * stride` line.
+fn build_indirect_blocks(samples: &[IndirectSample]) -> Vec<IndirectBlock> {
+    let mut blocks = Vec::new();
+    for kind in [IndirectKind::Address, IndirectKind::Data] {
+        let mut pts: Vec<&IndirectSample> = samples.iter().filter(|s| s.kind == kind).collect();
+        if pts.is_empty() {
+            continue;
+        }
+        pts.sort_by_key(|s| s.index);
+        pts.dedup_by_key(|s| s.index);
+        // Indirect registers are packed, so the stride equals the register size.
+        let stride = pts[0].size;
+        let mut segments = vec![IndirectSegment {
+            first_index: pts[0].index,
+            last_index: pts[0].index,
+            base: pts[0].address,
+        }];
+        for s in &pts[1..] {
+            let cur = segments.last_mut().unwrap();
+            if s.address == cur.base + (s.index - cur.first_index) * stride {
+                cur.last_index = s.index;
+            } else {
+                segments.push(IndirectSegment {
+                    first_index: s.index,
+                    last_index: s.index,
+                    base: s.address,
+                });
+            }
+        }
+        blocks.push(IndirectBlock {
+            kind,
+            size: pts[0].size,
+            segments,
+        });
+    }
+    blocks
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct ModelGroup {
     model: BTreeSet<DModel>,
     table: BTreeMap<Register, ControlTableRow>,
+    indirect: Vec<IndirectBlock>,
 }
 
 impl ModelGroup {
-    pub(crate) fn new(table: BTreeMap<Register, ControlTableRow>) -> Self {
+    pub(crate) fn new(
+        table: BTreeMap<Register, ControlTableRow>,
+        indirect: Vec<IndirectBlock>,
+    ) -> Self {
         Self {
             table,
+            indirect,
             ..Default::default()
         }
+    }
+
+    pub(crate) fn indirect(&self) -> &[IndirectBlock] {
+        &self.indirect
     }
 
     pub(crate) fn insert_model(&mut self, model: DModel) {
@@ -292,6 +415,7 @@ impl ControlTableRow {
 pub(crate) struct Model {
     pub(crate) model: dynamixel_registers::models::Model,
     pub(crate) table: BTreeMap<Register, ControlTableRow>,
+    pub(crate) indirect: Vec<IndirectBlock>,
 }
 
 pub fn parse_table(model_file: impl AsRef<Path>) -> anyhow::Result<Model> {
@@ -370,7 +494,12 @@ pub fn parse_table(model_file: impl AsRef<Path>) -> anyhow::Result<Model> {
         .ok()
         .or_else(|| DModel::from_u16(model_number))
         .ok_or_else(|| anyhow!("cannot find model for {} = {},", name, model_number))?;
-    let model = Model { model, table };
+    let indirect = build_indirect_blocks(&parse_indirect(&file));
+    let model = Model {
+        model,
+        table,
+        indirect,
+    };
 
     Ok(model)
 }
@@ -380,6 +509,7 @@ pub fn parse_table(model_file: impl AsRef<Path>) -> anyhow::Result<Model> {
 pub struct SeparatedTable {
     pub name: String,
     pub table: BTreeMap<Register, ControlTableRow>,
+    pub indirect: Vec<IndirectBlock>,
 }
 
 /// Build the separated (exact-unit) tables: for any model group whose members genuinely
@@ -399,11 +529,20 @@ pub fn separated_tables(models: &[Model]) -> Vec<SeparatedTable> {
         if !has_unit_conflict(&alias_models) {
             continue;
         }
-        // Partition by exact-unit compatibility (equal, or blank on either side).
-        let mut subs: Vec<(Vec<DModel>, BTreeMap<Register, ControlTableRow>)> = Vec::new();
+        // Partition by exact-unit compatibility (equal, or blank on either side). Indirect
+        // layout is uniform within an alias, so keep it from the first model of each sub.
+        type Sub = (
+            Vec<DModel>,
+            BTreeMap<Register, ControlTableRow>,
+            Vec<IndirectBlock>,
+        );
+        let mut subs: Vec<Sub> = Vec::new();
         for m in alias_models {
-            match subs.iter_mut().find(|(_, t)| unit_compatible(t, &m.table)) {
-                Some((members, table)) => {
+            match subs
+                .iter_mut()
+                .find(|(_, t, _)| unit_compatible(t, &m.table))
+            {
+                Some((members, table, _)) => {
                     members.push(m.model);
                     for (reg, row) in &m.table {
                         if let Some(existing) = table.get_mut(reg) {
@@ -411,13 +550,14 @@ pub fn separated_tables(models: &[Model]) -> Vec<SeparatedTable> {
                         }
                     }
                 }
-                None => subs.push((vec![m.model], m.table.clone())),
+                None => subs.push((vec![m.model], m.table.clone(), m.indirect.clone())),
             }
         }
-        for (members, table) in subs {
+        for (members, table, indirect) in subs {
             out.push(SeparatedTable {
                 name: common_prefix_name(&members),
                 table,
+                indirect,
             });
         }
     }

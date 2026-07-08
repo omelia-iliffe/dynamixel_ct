@@ -58,3 +58,16 @@ model![XC330T => {
     RealtimeTick: 120, 2, Access::R, Area::Ram, Some(UnitScale::new(Unit::Second, 0.001f32)),
     PwmSlope: 62, 1, Access::Rw, Area::Eeprom, Some(UnitScale::new(Unit::VoltPerSecond, 3.955f32)),
 }];
+
+impl XC330T {
+    /// Contiguous Indirect Address runs as `(address, byte length)` — sync-usable windows.
+    pub const fn indirect_address_blocks() -> &'static [crate::IndirectRange] {
+        const BLOCKS: &[crate::IndirectRange] = &[crate::IndirectRange::new(168, 56)];
+        BLOCKS
+    }
+    /// Contiguous Indirect Data runs as `(address, byte length)` — sync-usable windows.
+    pub const fn indirect_data_blocks() -> &'static [crate::IndirectRange] {
+        const BLOCKS: &[crate::IndirectRange] = &[crate::IndirectRange::new(224, 28)];
+        BLOCKS
+    }
+}

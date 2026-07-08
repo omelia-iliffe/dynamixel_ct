@@ -39,8 +39,10 @@ mod model_macro;
 pub mod models;
 
 #[cfg(feature = "std")]
-pub use control_table::ControlTable;
+pub use control_table::{common_indirect_address, common_indirect_data, ControlTable};
 pub use dynamixel_registers::models::{Model, ModelGroup, ModelOrModelGroup};
-pub use dynamixel_registers::{Access, Area, Register, RegisterData, Unit, UnitScale};
+pub use dynamixel_registers::{
+    Access, Area, IndirectRange, Register, RegisterData, Unit, UnitScale,
+};
 
 pub(crate) use model_macro::model;

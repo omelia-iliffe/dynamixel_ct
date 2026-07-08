@@ -2,4 +2,4 @@
 
 pub mod models;
 mod registers;
-pub use registers::{Access, Area, Register, RegisterData, Unit, UnitScale};
+pub use registers::{Access, Area, IndirectRange, Register, RegisterData, Unit, UnitScale};

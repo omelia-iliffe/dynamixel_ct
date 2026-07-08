@@ -54,3 +54,59 @@ pub(crate) fn control_table_from_model_group(
         _ => panic!("unknown model group"),
     }
 }
+
+#[cfg(feature = "std")]
+pub(crate) fn indirect_address_blocks_from_model_group(
+    model_group: &dynamixel_registers::models::ModelGroup,
+) -> &'static [dynamixel_registers::IndirectRange] {
+    use dynamixel_registers::models::ModelGroup;
+    match model_group {
+        ModelGroup::PH42 => PH42::indirect_address_blocks(),
+        ModelGroup::PH54 => PH54::indirect_address_blocks(),
+        ModelGroup::PM42 => PM42::indirect_address_blocks(),
+        ModelGroup::PM54 => PM54::indirect_address_blocks(),
+        ModelGroup::XC330 => XC330::indirect_address_blocks(),
+        ModelGroup::XL330 => XL330::indirect_address_blocks(),
+        ModelGroup::XM335 => XM335::indirect_address_blocks(),
+        ModelGroup::XC430 => XC430::indirect_address_blocks(),
+        ModelGroup::XL430 => XL430::indirect_address_blocks(),
+        ModelGroup::XD430 => XD430::indirect_address_blocks(),
+        ModelGroup::XH430 => XH430::indirect_address_blocks(),
+        ModelGroup::XM430 => XM430::indirect_address_blocks(),
+        ModelGroup::XD540 => XD540::indirect_address_blocks(),
+        ModelGroup::XH540 => XH540::indirect_address_blocks(),
+        ModelGroup::XM540 => XM540::indirect_address_blocks(),
+        ModelGroup::XW540 => XW540::indirect_address_blocks(),
+        ModelGroup::YM070 => YM070::indirect_address_blocks(),
+        ModelGroup::YM080 => YM080::indirect_address_blocks(),
+        _ => &[],
+    }
+}
+
+#[cfg(feature = "std")]
+pub(crate) fn indirect_data_blocks_from_model_group(
+    model_group: &dynamixel_registers::models::ModelGroup,
+) -> &'static [dynamixel_registers::IndirectRange] {
+    use dynamixel_registers::models::ModelGroup;
+    match model_group {
+        ModelGroup::PH42 => PH42::indirect_data_blocks(),
+        ModelGroup::PH54 => PH54::indirect_data_blocks(),
+        ModelGroup::PM42 => PM42::indirect_data_blocks(),
+        ModelGroup::PM54 => PM54::indirect_data_blocks(),
+        ModelGroup::XC330 => XC330::indirect_data_blocks(),
+        ModelGroup::XL330 => XL330::indirect_data_blocks(),
+        ModelGroup::XM335 => XM335::indirect_data_blocks(),
+        ModelGroup::XC430 => XC430::indirect_data_blocks(),
+        ModelGroup::XL430 => XL430::indirect_data_blocks(),
+        ModelGroup::XD430 => XD430::indirect_data_blocks(),
+        ModelGroup::XH430 => XH430::indirect_data_blocks(),
+        ModelGroup::XM430 => XM430::indirect_data_blocks(),
+        ModelGroup::XD540 => XD540::indirect_data_blocks(),
+        ModelGroup::XH540 => XH540::indirect_data_blocks(),
+        ModelGroup::XM540 => XM540::indirect_data_blocks(),
+        ModelGroup::XW540 => XW540::indirect_data_blocks(),
+        ModelGroup::YM070 => YM070::indirect_data_blocks(),
+        ModelGroup::YM080 => YM080::indirect_data_blocks(),
+        _ => &[],
+    }
+}

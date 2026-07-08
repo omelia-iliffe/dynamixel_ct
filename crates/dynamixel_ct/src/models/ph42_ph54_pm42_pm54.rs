@@ -63,3 +63,55 @@ model![PH42, PH54, PM42, PM54 => {
     ExternalPortData3: 604, 2, Access::Rw, Area::Ram, None,
     ExternalPortData4: 606, 2, Access::Rw, Area::Ram, None,
 }];
+
+impl PH42 {
+    /// Contiguous Indirect Address runs as `(address, byte length)` — sync-usable windows.
+    pub const fn indirect_address_blocks() -> &'static [crate::IndirectRange] {
+        const BLOCKS: &[crate::IndirectRange] = &[crate::IndirectRange::new(168, 256)];
+        BLOCKS
+    }
+    /// Contiguous Indirect Data runs as `(address, byte length)` — sync-usable windows.
+    pub const fn indirect_data_blocks() -> &'static [crate::IndirectRange] {
+        const BLOCKS: &[crate::IndirectRange] = &[crate::IndirectRange::new(634, 128)];
+        BLOCKS
+    }
+}
+
+impl PH54 {
+    /// Contiguous Indirect Address runs as `(address, byte length)` — sync-usable windows.
+    pub const fn indirect_address_blocks() -> &'static [crate::IndirectRange] {
+        const BLOCKS: &[crate::IndirectRange] = &[crate::IndirectRange::new(168, 256)];
+        BLOCKS
+    }
+    /// Contiguous Indirect Data runs as `(address, byte length)` — sync-usable windows.
+    pub const fn indirect_data_blocks() -> &'static [crate::IndirectRange] {
+        const BLOCKS: &[crate::IndirectRange] = &[crate::IndirectRange::new(634, 128)];
+        BLOCKS
+    }
+}
+
+impl PM42 {
+    /// Contiguous Indirect Address runs as `(address, byte length)` — sync-usable windows.
+    pub const fn indirect_address_blocks() -> &'static [crate::IndirectRange] {
+        const BLOCKS: &[crate::IndirectRange] = &[crate::IndirectRange::new(168, 256)];
+        BLOCKS
+    }
+    /// Contiguous Indirect Data runs as `(address, byte length)` — sync-usable windows.
+    pub const fn indirect_data_blocks() -> &'static [crate::IndirectRange] {
+        const BLOCKS: &[crate::IndirectRange] = &[crate::IndirectRange::new(634, 128)];
+        BLOCKS
+    }
+}
+
+impl PM54 {
+    /// Contiguous Indirect Address runs as `(address, byte length)` — sync-usable windows.
+    pub const fn indirect_address_blocks() -> &'static [crate::IndirectRange] {
+        const BLOCKS: &[crate::IndirectRange] = &[crate::IndirectRange::new(168, 256)];
+        BLOCKS
+    }
+    /// Contiguous Indirect Data runs as `(address, byte length)` — sync-usable windows.
+    pub const fn indirect_data_blocks() -> &'static [crate::IndirectRange] {
+        const BLOCKS: &[crate::IndirectRange] = &[crate::IndirectRange::new(634, 128)];
+        BLOCKS
+    }
+}

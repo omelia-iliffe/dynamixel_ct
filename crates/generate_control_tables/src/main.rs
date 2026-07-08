@@ -46,7 +46,7 @@ fn main() -> Result<()> {
             mg.insert_model(m.model);
             mg.merge(m.table);
         } else {
-            let mut mg = ModelGroup::new(m.table);
+            let mut mg = ModelGroup::new(m.table, m.indirect);
             mg.insert_model(m.model);
             all_models.push(mg);
         }

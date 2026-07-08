@@ -63,3 +63,60 @@ model![XD540, XH540, XM540 => {
     ExternalPortData2: 154, 2, Access::Rw, Area::Ram, None,
     ExternalPortData3: 156, 2, Access::Rw, Area::Ram, None,
 }];
+
+impl XD540 {
+    /// Contiguous Indirect Address runs as `(address, byte length)` — sync-usable windows.
+    pub const fn indirect_address_blocks() -> &'static [crate::IndirectRange] {
+        const BLOCKS: &[crate::IndirectRange] = &[
+            crate::IndirectRange::new(168, 56),
+            crate::IndirectRange::new(578, 56),
+        ];
+        BLOCKS
+    }
+    /// Contiguous Indirect Data runs as `(address, byte length)` — sync-usable windows.
+    pub const fn indirect_data_blocks() -> &'static [crate::IndirectRange] {
+        const BLOCKS: &[crate::IndirectRange] = &[
+            crate::IndirectRange::new(224, 28),
+            crate::IndirectRange::new(634, 28),
+        ];
+        BLOCKS
+    }
+}
+
+impl XH540 {
+    /// Contiguous Indirect Address runs as `(address, byte length)` — sync-usable windows.
+    pub const fn indirect_address_blocks() -> &'static [crate::IndirectRange] {
+        const BLOCKS: &[crate::IndirectRange] = &[
+            crate::IndirectRange::new(168, 56),
+            crate::IndirectRange::new(578, 56),
+        ];
+        BLOCKS
+    }
+    /// Contiguous Indirect Data runs as `(address, byte length)` — sync-usable windows.
+    pub const fn indirect_data_blocks() -> &'static [crate::IndirectRange] {
+        const BLOCKS: &[crate::IndirectRange] = &[
+            crate::IndirectRange::new(224, 28),
+            crate::IndirectRange::new(634, 28),
+        ];
+        BLOCKS
+    }
+}
+
+impl XM540 {
+    /// Contiguous Indirect Address runs as `(address, byte length)` — sync-usable windows.
+    pub const fn indirect_address_blocks() -> &'static [crate::IndirectRange] {
+        const BLOCKS: &[crate::IndirectRange] = &[
+            crate::IndirectRange::new(168, 56),
+            crate::IndirectRange::new(578, 56),
+        ];
+        BLOCKS
+    }
+    /// Contiguous Indirect Data runs as `(address, byte length)` — sync-usable windows.
+    pub const fn indirect_data_blocks() -> &'static [crate::IndirectRange] {
+        const BLOCKS: &[crate::IndirectRange] = &[
+            crate::IndirectRange::new(224, 28),
+            crate::IndirectRange::new(634, 28),
+        ];
+        BLOCKS
+    }
+}

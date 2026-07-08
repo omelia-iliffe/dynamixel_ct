@@ -79,3 +79,29 @@ model![YM070, YM080 => {
     InverterTemperatureLimit: 56, 1, Access::Rw, Area::Eeprom, Some(UnitScale::new(Unit::DegreesCelsius, 1f32)),
     PositionLimitThreshold: 38, 2, Access::Rw, Area::Eeprom, Some(UnitScale::new(Unit::Pulse, 1f32)),
 }];
+
+impl YM070 {
+    /// Contiguous Indirect Address runs as `(address, byte length)` — sync-usable windows.
+    pub const fn indirect_address_blocks() -> &'static [crate::IndirectRange] {
+        const BLOCKS: &[crate::IndirectRange] = &[crate::IndirectRange::new(256, 256)];
+        BLOCKS
+    }
+    /// Contiguous Indirect Data runs as `(address, byte length)` — sync-usable windows.
+    pub const fn indirect_data_blocks() -> &'static [crate::IndirectRange] {
+        const BLOCKS: &[crate::IndirectRange] = &[crate::IndirectRange::new(634, 128)];
+        BLOCKS
+    }
+}
+
+impl YM080 {
+    /// Contiguous Indirect Address runs as `(address, byte length)` — sync-usable windows.
+    pub const fn indirect_address_blocks() -> &'static [crate::IndirectRange] {
+        const BLOCKS: &[crate::IndirectRange] = &[crate::IndirectRange::new(256, 256)];
+        BLOCKS
+    }
+    /// Contiguous Indirect Data runs as `(address, byte length)` — sync-usable windows.
+    pub const fn indirect_data_blocks() -> &'static [crate::IndirectRange] {
+        const BLOCKS: &[crate::IndirectRange] = &[crate::IndirectRange::new(634, 128)];
+        BLOCKS
+    }
+}

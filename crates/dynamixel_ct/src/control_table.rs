@@ -4,6 +4,7 @@
 //!
 use derive_more::{Display, Error};
 use dynamixel_registers::models::{Model, ModelGroup, ModelOrModelGroup};
+use dynamixel_registers::IndirectRange;
 use dynamixel_registers::Register;
 use dynamixel_registers::RegisterData;
 
@@ -73,6 +74,82 @@ impl ControlTable {
             .get(&register)
             .ok_or_else(|| RegisterError::new(self.model, self.model_group, register))
     }
+
+    /// The contiguous Indirect Address runs for this model (each a sync-usable window).
+    pub fn indirect_address_blocks(&self) -> &'static [IndirectRange] {
+        crate::models::indirect_address_blocks_from_model_group(&self.model_group)
+    }
+
+    /// The contiguous Indirect Data runs for this model (each a sync-usable window).
+    pub fn indirect_data_blocks(&self) -> &'static [IndirectRange] {
+        crate::models::indirect_data_blocks_from_model_group(&self.model_group)
+    }
+}
+
+/// The Indirect Data windows every given model shares — the `(address, length)` regions a
+/// sync read/write can cover across all of them. Empty if they share no indirect data.
+pub fn common_indirect_data(tables: &[&ControlTable]) -> Vec<IndirectRange> {
+    common_indirect(tables, ControlTable::indirect_data_blocks)
+}
+
+/// As [`common_indirect_data`], for the Indirect Address (configuration) registers.
+pub fn common_indirect_address(tables: &[&ControlTable]) -> Vec<IndirectRange> {
+    common_indirect(tables, ControlTable::indirect_address_blocks)
+}
+
+/// A half-open byte interval `[start, end)`, used to intersect indirect ranges.
+#[derive(Clone, Copy)]
+struct Interval {
+    start: u16,
+    end: u16,
+}
+
+impl Interval {
+    /// The overlap of two intervals, or `None` if they are disjoint.
+    fn overlap(self, other: Interval) -> Option<Interval> {
+        let start = self.start.max(other.start);
+        let end = self.end.min(other.end);
+        (start < end).then_some(Interval { start, end })
+    }
+}
+
+/// Intersect one indirect family's byte ranges across every table, returning the windows
+/// they all share. Starts from the first table's ranges and narrows against each of the rest.
+fn common_indirect(
+    tables: &[&ControlTable],
+    blocks: impl Fn(&ControlTable) -> &'static [IndirectRange],
+) -> Vec<IndirectRange> {
+    let intervals = |table: &ControlTable| -> Vec<Interval> {
+        blocks(table)
+            .iter()
+            .map(|r| Interval {
+                start: r.address,
+                end: r.address + r.length,
+            })
+            .collect()
+    };
+
+    let Some((first, rest)) = tables.split_first() else {
+        return Vec::new();
+    };
+
+    let mut shared = intervals(first);
+    for table in rest {
+        let next = intervals(table);
+        shared = shared
+            .iter()
+            .flat_map(|a| next.iter().filter_map(|b| a.overlap(*b)))
+            .collect();
+        if shared.is_empty() {
+            break;
+        }
+    }
+
+    shared.sort_unstable_by_key(|i| i.start);
+    shared
+        .into_iter()
+        .map(|i| IndirectRange::new(i.start, i.end - i.start))
+        .collect()
 }
 
 impl From<ModelOrModelGroup> for ControlTable {
@@ -177,5 +254,38 @@ mod test {
                 .unwrap_err(),
             RegisterError::new(Some(model), model.into(), register)
         );
+    }
+
+    #[test]
+    fn test_indirect_blocks() {
+        use crate::models::XM430;
+        use dynamixel_registers::IndirectRange;
+
+        // Two blocks: the X series splits at index 29 (224-251, then 634-661).
+        assert_eq!(
+            XM430::indirect_data_blocks(),
+            &[IndirectRange::new(224, 28), IndirectRange::new(634, 28)]
+        );
+        assert_eq!(
+            ControlTable::new_with_model(Model::XM430_W210).indirect_data_blocks(),
+            XM430::indirect_data_blocks()
+        );
+
+        let xm = ControlTable::new_with_model(Model::XM430_W210);
+        let ym = ControlTable::new_with_model(Model::YM070_210_M001_RH);
+        let xc = ControlTable::new_with_model(Model::XC330_M181);
+
+        // XM (28@224, 28@634) ∩ YM (128@634) => 28 bytes at 634.
+        assert_eq!(
+            super::common_indirect_data(&[&xm, &ym]),
+            vec![IndirectRange::new(634, 28)]
+        );
+        // XC330 and XM430 share the first block.
+        assert_eq!(
+            super::common_indirect_data(&[&xc, &xm]),
+            vec![IndirectRange::new(224, 28)]
+        );
+        // Small-X data (224) and Y data (634) never overlap.
+        assert!(super::common_indirect_data(&[&xc, &ym]).is_empty());
     }
 }

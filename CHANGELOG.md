@@ -5,6 +5,11 @@
 - **(generator)** Switch source to ROBOTIS docs platform
 - **(ct)** [**breaking**] Add unit and scale to register data
 - **(generator)** Derive register units from the docs unit column
+- **(ct)** Add access and area to register data
+- **(ct)** Add indirect register blocks and sync helpers
+### Bug Fixes
+- [**breaking**] Incorrect XM335_T323 model number
+- **(ct)** Use comma-separated model names in model! macro
 ### Refactor
 - **(generator)** Simplify parsing and generation
 - **(generator)** Drop unused control_table_from_model

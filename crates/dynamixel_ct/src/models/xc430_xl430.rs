@@ -55,3 +55,41 @@ model![XC430, XL430 => {
     RealtimeTick: 120, 2, Access::R, Area::Ram, Some(UnitScale::new(Unit::Second, 0.001f32)),
     PresentLoad: 126, 2, Access::R, Area::Ram, Some(UnitScale::new(Unit::Percent, 0.1f32)),
 }];
+
+impl XC430 {
+    /// Contiguous Indirect Address runs as `(address, byte length)` — sync-usable windows.
+    pub const fn indirect_address_blocks() -> &'static [crate::IndirectRange] {
+        const BLOCKS: &[crate::IndirectRange] = &[
+            crate::IndirectRange::new(168, 56),
+            crate::IndirectRange::new(578, 56),
+        ];
+        BLOCKS
+    }
+    /// Contiguous Indirect Data runs as `(address, byte length)` — sync-usable windows.
+    pub const fn indirect_data_blocks() -> &'static [crate::IndirectRange] {
+        const BLOCKS: &[crate::IndirectRange] = &[
+            crate::IndirectRange::new(224, 28),
+            crate::IndirectRange::new(634, 28),
+        ];
+        BLOCKS
+    }
+}
+
+impl XL430 {
+    /// Contiguous Indirect Address runs as `(address, byte length)` — sync-usable windows.
+    pub const fn indirect_address_blocks() -> &'static [crate::IndirectRange] {
+        const BLOCKS: &[crate::IndirectRange] = &[
+            crate::IndirectRange::new(168, 56),
+            crate::IndirectRange::new(578, 56),
+        ];
+        BLOCKS
+    }
+    /// Contiguous Indirect Data runs as `(address, byte length)` — sync-usable windows.
+    pub const fn indirect_data_blocks() -> &'static [crate::IndirectRange] {
+        const BLOCKS: &[crate::IndirectRange] = &[
+            crate::IndirectRange::new(224, 28),
+            crate::IndirectRange::new(634, 28),
+        ];
+        BLOCKS
+    }
+}

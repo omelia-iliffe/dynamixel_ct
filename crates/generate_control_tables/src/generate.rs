@@ -1,4 +1,4 @@
-use crate::parse::{ControlTableRow, ModelGroup, SeparatedTable};
+use crate::parse::{ControlTableRow, IndirectBlock, IndirectKind, ModelGroup, SeparatedTable};
 use dynamixel_registers::Register;
 use itertools::Itertools;
 use std::collections::BTreeMap;
@@ -49,6 +49,43 @@ pub fn create_match(mod_path: &PathBuf, all_models: &[ModelGroup]) -> anyhow::Re
     writeln!(mod_file, r#"        _ => panic!("unknown model group")"#)?;
     writeln!(mod_file, "    }}")?;
     writeln!(mod_file, "}}")?;
+
+    // Dispatch the per-group indirect block layouts, backing the dynamic
+    // `ControlTable::indirect_address_blocks` / `indirect_data_blocks` methods.
+    for (fn_name, method, kind) in [
+        (
+            "indirect_address_blocks_from_model_group",
+            "indirect_address_blocks",
+            IndirectKind::Address,
+        ),
+        (
+            "indirect_data_blocks_from_model_group",
+            "indirect_data_blocks",
+            IndirectKind::Data,
+        ),
+    ] {
+        writeln!(mod_file)?;
+        writeln!(mod_file, r#"#[cfg(feature = "std")]"#)?;
+        writeln!(mod_file, "pub(crate) fn {fn_name}(model_group: &dynamixel_registers::models::ModelGroup) -> &'static [dynamixel_registers::IndirectRange] {{")?;
+        writeln!(mod_file, "    use dynamixel_registers::models::ModelGroup;")?;
+        writeln!(mod_file, "    match model_group {{")?;
+        for group in all_models {
+            let has = group.indirect().iter().any(|b| b.kind == kind);
+            for alias in group.alias().keys() {
+                if has {
+                    writeln!(
+                        mod_file,
+                        "        ModelGroup::{alias} => {alias}::{method}(),"
+                    )?;
+                } else {
+                    writeln!(mod_file, "        ModelGroup::{alias} => &[],")?;
+                }
+            }
+        }
+        writeln!(mod_file, "        _ => &[],")?;
+        writeln!(mod_file, "    }}")?;
+        writeln!(mod_file, "}}")?;
+    }
     Ok(())
 }
 
@@ -85,6 +122,50 @@ fn emit_model_file(
     Ok(())
 }
 
+/// Emit `impl <Name> { indirect_address_blocks / indirect_data_blocks }` returning the
+/// contiguous (address, byte length) runs of each indirect family.
+fn emit_indirect_impls(
+    file: &mut File,
+    struct_names: &str,
+    indirect: &[IndirectBlock],
+) -> anyhow::Result<()> {
+    if indirect.is_empty() {
+        return Ok(());
+    }
+    for name in struct_names.split_whitespace() {
+        writeln!(file)?;
+        writeln!(file, "impl {name} {{")?;
+        for block in indirect {
+            let (method, human) = match block.kind {
+                IndirectKind::Address => ("indirect_address", "Indirect Address"),
+                IndirectKind::Data => ("indirect_data", "Indirect Data"),
+            };
+            writeln!(
+                file,
+                "    /// Contiguous {human} runs as `(address, byte length)` — sync-usable windows."
+            )?;
+            writeln!(
+                file,
+                "    pub const fn {method}_blocks() -> &'static [crate::IndirectRange] {{"
+            )?;
+            writeln!(file, "        const BLOCKS: &[crate::IndirectRange] = &[")?;
+            for seg in &block.segments {
+                let bytes = (seg.last_index - seg.first_index + 1) * block.size;
+                writeln!(
+                    file,
+                    "            crate::IndirectRange::new({}, {bytes}),",
+                    seg.base,
+                )?;
+            }
+            writeln!(file, "        ];")?;
+            writeln!(file, "        BLOCKS")?;
+            writeln!(file, "    }}")?;
+        }
+        writeln!(file, "}}")?;
+    }
+    Ok(())
+}
+
 /// Create `<dir>/<stem>.rs` containing the model table, and register it in `mod.rs`.
 fn write_table_file(
     mod_path: impl AsRef<Path>,
@@ -92,6 +173,7 @@ fn write_table_file(
     stem: &str,
     struct_names: &str,
     table: &BTreeMap<Register, ControlTableRow>,
+    indirect: &[IndirectBlock],
 ) -> anyhow::Result<()> {
     let dir = dir.as_ref();
     fs::create_dir_all(dir)?;
@@ -103,6 +185,7 @@ fn write_table_file(
         .truncate(true)
         .open(&file_path)?;
     emit_model_file(&mut file, struct_names, table)?;
+    emit_indirect_impls(&mut file, struct_names, indirect)?;
 
     let mut mod_file = fs::OpenOptions::new()
         .append(true)
@@ -125,6 +208,7 @@ pub fn write_file_model_group(
         &model.file_name(),
         &struct_names,
         model.table(),
+        model.indirect(),
     )
 }
 
@@ -140,5 +224,6 @@ pub fn write_separated_table(
         &separated.name.to_lowercase(),
         &separated.name,
         &separated.table,
+        &separated.indirect,
     )
 }

@@ -111,6 +111,25 @@ impl RegisterData {
     }
 }
 
+/// A contiguous run of indirect registers, as a `(start address, byte length)` pair — the
+/// two values a sync read/write needs. Indirect registers of a family are packed, so this
+/// spans a gap-free region; a model with a split block exposes one `IndirectRange` per run.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct IndirectRange {
+    /// Control-table address of the first register in the run.
+    pub address: u16,
+    /// Byte length of the run — usable directly as a sync read/write length.
+    pub length: u16,
+}
+
+impl IndirectRange {
+    /// Create a new [`IndirectRange`].
+    pub const fn new(address: u16, length: u16) -> Self {
+        Self { address, length }
+    }
+}
+
 #[allow(missing_docs)]
 #[derive(Clone, Copy, Eq, PartialEq, Debug, Hash, Ord, PartialOrd, derive_more::Display)]
 #[cfg_attr(
