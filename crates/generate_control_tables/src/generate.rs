@@ -65,7 +65,11 @@ fn emit_model_file(
     writeln!(file, "use crate::model;")?;
     writeln!(file)?;
     writeln!(file)?;
-    writeln!(file, "model![{struct_names} => {{")?;
+    let macro_names = struct_names
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(", ");
+    writeln!(file, "model![{macro_names} => {{")?;
     for row in table.values() {
         let unit = match row.unit {
             Some(u) => format!("Some(UnitScale::new(Unit::{:?}, {}f32))", u.unit, u.scale),

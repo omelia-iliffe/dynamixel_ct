@@ -63,7 +63,7 @@ macro_rules! model {
         }
 
     };
-    ($($model:ident)+ => $registers:tt  ) => {
+    ($($model:ident),+ => $registers:tt  ) => {
         use $crate::RegisterData;
         use $crate::Register;
         #[allow(unused_imports)]

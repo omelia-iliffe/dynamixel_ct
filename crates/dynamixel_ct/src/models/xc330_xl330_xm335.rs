@@ -2,7 +2,7 @@
 
 use crate::model;
 
-model![XC330 XL330 XM335 => {
+model![XC330, XL330, XM335 => {
     ModelNumber: 0, 2, Access::R, Area::Eeprom, None,
     ModelInformation: 2, 4, Access::R, Area::Eeprom, None,
     FirmwareVersion: 6, 1, Access::R, Area::Eeprom, None,
