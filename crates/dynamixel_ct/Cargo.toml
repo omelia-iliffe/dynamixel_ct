@@ -11,6 +11,18 @@ description = "A crate for working with the control tables of Dynamixel servos"
 name = "multiple_models"
 required-features = ["std"]
 
+[[example]]
+name = "hardcoded_xm430"
+required-features = ["std"]
+
+[[example]]
+name = "dynamic_model"
+required-features = ["std"]
+
+[[example]]
+name = "indirect"
+required-features = ["std"]
+
 
 [features]
 default = ["std"]
@@ -30,3 +42,4 @@ pastey = {version = "0.1.0"}
 [dev-dependencies]
 serde_json = "1"
 toml = "0.8.19"
+dynamixel2 = "0.9"
