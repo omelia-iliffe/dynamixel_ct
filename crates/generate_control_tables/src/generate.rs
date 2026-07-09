@@ -1,7 +1,7 @@
 use crate::parse::{ControlTableRow, IndirectBlock, IndirectKind, ModelGroup, SeparatedTable};
 use dynamixel_registers::Register;
 use itertools::Itertools;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::fs::File;
 use std::io::Write;
@@ -86,6 +86,72 @@ pub fn create_match(mod_path: &PathBuf, all_models: &[ModelGroup]) -> anyhow::Re
         writeln!(mod_file, "    }}")?;
         writeln!(mod_file, "}}")?;
     }
+    Ok(())
+}
+
+/// Emit the resolution lookups into `mod.rs`: `position_resolution(model)` for the exact
+/// pulses-per-revolution of a model, and `position_resolution_from_model_group(group)`
+/// returning `Some` only when every model in the group agrees (the Y series does not).
+pub fn create_resolution(
+    mod_path: &PathBuf,
+    resolutions: &BTreeMap<dynamixel_registers::models::Model, u32>,
+) -> anyhow::Result<()> {
+    use dynamixel_registers::models::ModelGroup;
+
+    let mut mod_file = fs::OpenOptions::new()
+        .append(true)
+        .create(true)
+        .open(mod_path)?;
+
+    writeln!(mod_file)?;
+    writeln!(
+        mod_file,
+        "/// The position encoder resolution in pulses per revolution for a model, from the ROBOTIS docs."
+    )?;
+    writeln!(
+        mod_file,
+        "pub fn position_resolution(model: dynamixel_registers::models::Model) -> u32 {{"
+    )?;
+    writeln!(mod_file, "    use dynamixel_registers::models::Model;")?;
+    writeln!(mod_file, "    match model {{")?;
+    for (model, res) in resolutions {
+        writeln!(mod_file, "        Model::{model} => {res},")?;
+    }
+    writeln!(
+        mod_file,
+        r#"        _ => panic!("no resolution for model {{model}}"),"#
+    )?;
+    writeln!(mod_file, "    }}")?;
+    writeln!(mod_file, "}}")?;
+
+    // A group has one shared resolution only if all its members agree.
+    let mut by_group: BTreeMap<ModelGroup, BTreeSet<u32>> = BTreeMap::new();
+    for (model, res) in resolutions {
+        by_group
+            .entry(model.model_group())
+            .or_default()
+            .insert(*res);
+    }
+
+    writeln!(mod_file)?;
+    writeln!(
+        mod_file,
+        "/// The shared position resolution of a model group, or `None` if its models disagree (the Y series)."
+    )?;
+    writeln!(mod_file, r#"#[cfg(feature = "std")]"#)?;
+    writeln!(mod_file, "pub(crate) fn position_resolution_from_model_group(model_group: &dynamixel_registers::models::ModelGroup) -> Option<u32> {{")?;
+    writeln!(mod_file, "    use dynamixel_registers::models::ModelGroup;")?;
+    writeln!(mod_file, "    match model_group {{")?;
+    for (group, values) in &by_group {
+        match values.iter().exactly_one() {
+            Ok(res) => writeln!(mod_file, "        ModelGroup::{group} => Some({res}),")?,
+            Err(_) => writeln!(mod_file, "        ModelGroup::{group} => None,")?,
+        }
+    }
+    writeln!(mod_file, "        _ => None,")?;
+    writeln!(mod_file, "    }}")?;
+    writeln!(mod_file, "}}")?;
+
     Ok(())
 }
 

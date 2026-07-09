@@ -68,6 +68,35 @@ impl ControlTable {
         self.model_group
     }
 
+    /// The position encoder resolution in pulses per revolution for this table's servo,
+    /// if known.
+    ///
+    /// Uses the exact [`Model`] when available, otherwise falls back to the
+    /// [`ModelGroup`] (which is ambiguous, and so `None`, for the Y series — construct
+    /// the table with [`new_with_model`](Self::new_with_model) to resolve it).
+    pub fn position_resolution(&self) -> Option<u32> {
+        self.model
+            .map(crate::models::position_resolution)
+            .or_else(|| crate::models::position_resolution_from_model_group(&self.model_group))
+    }
+
+    /// Convert a raw position value (in pulses) to radians, if the resolution is known.
+    ///
+    /// The mapping is linear with pulse `0` at `0` radians; centre offsets (e.g. the
+    /// Homing Offset register) are the caller's responsibility. Returns `None` when the
+    /// resolution is unknown (see [`position_resolution`](Self::position_resolution)).
+    pub fn pulses_to_radians(&self, pulses: i32) -> Option<f32> {
+        self.position_resolution()
+            .map(|res| dynamixel_registers::pulses_to_radians(pulses, res))
+    }
+
+    /// Convert an angle in radians to the nearest raw position value (in pulses), if the
+    /// resolution is known.
+    pub fn radians_to_pulses(&self, radians: f32) -> Option<i32> {
+        self.position_resolution()
+            .map(|res| dynamixel_registers::radians_to_pulses(radians, res))
+    }
+
     /// Get the register data for a specific register.
     pub fn get(&self, register: Register) -> Result<&RegisterData, RegisterError> {
         self.table
@@ -236,7 +265,10 @@ mod serde_tests {
 
 #[cfg(test)]
 mod test {
-    use dynamixel_registers::{models::Model, Register};
+    use dynamixel_registers::{
+        models::{Model, ModelGroup},
+        Register,
+    };
 
     use crate::control_table::RegisterError;
     use crate::ControlTable;
@@ -253,6 +285,36 @@ mod test {
                 .inspect_err(|e| println!("{e}"))
                 .unwrap_err(),
             RegisterError::new(Some(model), model.into(), register)
+        );
+    }
+
+    #[test]
+    fn test_resolution_and_conversion() {
+        // Exact model, and group fallback, both resolve for the X series.
+        let xm = ControlTable::new_with_model(Model::XM430_W210);
+        assert_eq!(xm.position_resolution(), Some(4096));
+        assert_eq!(
+            ControlTable::new(ModelGroup::XM430).position_resolution(),
+            Some(4096)
+        );
+        assert_eq!(crate::position_resolution(Model::PH42_020_S300_R), 607_500);
+
+        // Half a turn of a 4096-pulse encoder is 2048 pulses, and back.
+        assert_eq!(xm.radians_to_pulses(core::f32::consts::PI), Some(2048));
+        let rad = xm.pulses_to_radians(4096).unwrap();
+        assert!((rad - 2.0 * core::f32::consts::PI).abs() < 1e-4);
+
+        // The Y series resolution depends on the gear ratio: ambiguous by group, exact by model.
+        assert_eq!(
+            ControlTable::new(ModelGroup::YM070).position_resolution(),
+            None
+        );
+        assert!(ControlTable::new(ModelGroup::YM070)
+            .radians_to_pulses(1.0)
+            .is_none());
+        assert_eq!(
+            ControlTable::new_with_model(Model::YM070_200_R099_RH).position_resolution(),
+            Some(51_904_512)
         );
     }
 

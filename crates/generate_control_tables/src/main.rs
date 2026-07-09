@@ -36,6 +36,11 @@ fn main() -> Result<()> {
     // consumes `models`.
     let separated = parse::separated_tables(&models);
 
+    // Per-model encoder resolution, keyed by exact model (varies within a group for the Y
+    // series). Collected before grouping consumes `models`.
+    let resolutions: std::collections::BTreeMap<_, _> =
+        models.iter().map(|m| (m.model, m.resolution)).collect();
+
     let mut all_models: Vec<ModelGroup> = Vec::new();
 
     for m in models {
@@ -79,6 +84,7 @@ fn main() -> Result<()> {
     }
 
     generate::create_match(&mod_path, &all_models)?;
+    generate::create_resolution(&mod_path, &resolutions)?;
 
     let mut fmt = Command::new("cargo").arg("fmt").spawn()?;
     if !fmt.wait()?.success() {

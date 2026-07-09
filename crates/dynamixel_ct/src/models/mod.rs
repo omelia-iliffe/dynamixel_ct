@@ -110,3 +110,87 @@ pub(crate) fn indirect_data_blocks_from_model_group(
         _ => &[],
     }
 }
+
+/// The position encoder resolution in pulses per revolution for a model, from the ROBOTIS docs.
+pub fn position_resolution(model: dynamixel_registers::models::Model) -> u32 {
+    use dynamixel_registers::models::Model;
+    match model {
+        Model::XH430_W350 => 4096,
+        Model::XD430_T350 => 4096,
+        Model::XH430_W210 => 4096,
+        Model::XD430_T210 => 4096,
+        Model::XM430_W350 => 4096,
+        Model::XM430_W210 => 4096,
+        Model::XH430_V350 => 4096,
+        Model::XH430_V210 => 4096,
+        Model::XL430_W250 => 4096,
+        Model::XC430_W150 => 4096,
+        Model::XC430_W240 => 4096,
+        Model::XH540_W270 => 4096,
+        Model::XD540_T270 => 4096,
+        Model::XH540_W150 => 4096,
+        Model::XD540_T150 => 4096,
+        Model::XM540_W270 => 4096,
+        Model::XM540_W150 => 4096,
+        Model::XH540_V270 => 4096,
+        Model::XH540_V150 => 4096,
+        Model::XW540_T260 => 4096,
+        Model::XW540_T140 => 4096,
+        Model::XL330_M077 => 4096,
+        Model::XL330_M288 => 4096,
+        Model::XC330_T181 => 4096,
+        Model::XC330_T288 => 4096,
+        Model::XC330_M181 => 4096,
+        Model::XC330_M288 => 4096,
+        Model::XW540_H260 => 4096,
+        Model::XM335_T323 => 4096,
+        Model::PH42_020_S300_R => 607500,
+        Model::PH54_100_S500_R => 1003846,
+        Model::PH54_200_S500_R => 1003846,
+        Model::PM42_010_S260_R => 526374,
+        Model::PM54_040_S250_R => 502834,
+        Model::PM54_060_S250_R => 502834,
+        Model::YM070_210_M001_RH => 524288,
+        Model::YM070_210_B001_RH => 524288,
+        Model::YM070_200_R051_RH => 26738688,
+        Model::YM070_200_R099_RH => 51904512,
+        Model::YM070_210_A051_RH => 26738688,
+        Model::YM070_200_A099_RH => 51904512,
+        Model::YM080_230_M001_RH => 524288,
+        Model::YM080_230_B001_RH => 524288,
+        Model::YM080_230_R051_RH => 26738688,
+        Model::YM080_230_R099_RH => 51904512,
+        Model::YM080_230_A051_RH => 26738688,
+        Model::YM080_230_A099_RH => 51904512,
+        _ => panic!("no resolution for model {model}"),
+    }
+}
+
+/// The shared position resolution of a model group, or `None` if its models disagree (the Y series).
+#[cfg(feature = "std")]
+pub(crate) fn position_resolution_from_model_group(
+    model_group: &dynamixel_registers::models::ModelGroup,
+) -> Option<u32> {
+    use dynamixel_registers::models::ModelGroup;
+    match model_group {
+        ModelGroup::PH42 => Some(607500),
+        ModelGroup::PH54 => Some(1003846),
+        ModelGroup::PM42 => Some(526374),
+        ModelGroup::PM54 => Some(502834),
+        ModelGroup::XC330 => Some(4096),
+        ModelGroup::XC430 => Some(4096),
+        ModelGroup::XD430 => Some(4096),
+        ModelGroup::XD540 => Some(4096),
+        ModelGroup::XH430 => Some(4096),
+        ModelGroup::XH540 => Some(4096),
+        ModelGroup::XL330 => Some(4096),
+        ModelGroup::XL430 => Some(4096),
+        ModelGroup::XM335 => Some(4096),
+        ModelGroup::XM430 => Some(4096),
+        ModelGroup::XM540 => Some(4096),
+        ModelGroup::XW540 => Some(4096),
+        ModelGroup::YM070 => None,
+        ModelGroup::YM080 => None,
+        _ => None,
+    }
+}

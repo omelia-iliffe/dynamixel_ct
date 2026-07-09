@@ -23,6 +23,10 @@ required-features = ["std"]
 name = "indirect"
 required-features = ["std"]
 
+[[example]]
+name = "radians"
+required-features = ["std"]
+
 
 [features]
 default = ["std"]

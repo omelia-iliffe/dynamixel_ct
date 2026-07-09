@@ -23,6 +23,10 @@ static UNIT_RE: LazyLock<Regex> =
 /// Matches an indirect register row: `Indirect Address 1` / `Indirect Data 12`.
 static INDIRECT_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"Indirect\s+(Address|Data)\s*(\d+)").unwrap());
+/// Matches the specifications' Resolution row: `| Resolution | 4,096 [pulse/rev] |`.
+static RESOLUTION_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)^\|\s*Resolution\s*\|\s*([0-9,]+)\s*\[\s*pulse/rev\s*\]").unwrap()
+});
 
 /// Parse a unit-column cell into a normalised base [`UnitScale`].
 ///
@@ -411,11 +415,20 @@ impl ControlTableRow {
     }
 }
 
+/// Scrape the encoder resolution (pulses per revolution) from the specifications table.
+fn parse_resolution(file: &str) -> Option<u32> {
+    file.lines().find_map(|line| {
+        let caps = RESOLUTION_RE.captures(line.trim())?;
+        caps[1].replace(',', "").parse().ok()
+    })
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct Model {
     pub(crate) model: dynamixel_registers::models::Model,
     pub(crate) table: BTreeMap<Register, ControlTableRow>,
     pub(crate) indirect: Vec<IndirectBlock>,
+    pub(crate) resolution: u32,
 }
 
 pub fn parse_table(model_file: impl AsRef<Path>) -> anyhow::Result<Model> {
@@ -495,10 +508,13 @@ pub fn parse_table(model_file: impl AsRef<Path>) -> anyhow::Result<Model> {
         .or_else(|| DModel::from_u16(model_number))
         .ok_or_else(|| anyhow!("cannot find model for {} = {},", name, model_number))?;
     let indirect = build_indirect_blocks(&parse_indirect(&file));
+    let resolution =
+        parse_resolution(&file).ok_or_else(|| anyhow!("cannot find resolution for {}", name))?;
     let model = Model {
         model,
         table,
         indirect,
+        resolution,
     };
 
     Ok(model)

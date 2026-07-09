@@ -42,7 +42,9 @@ pub mod models;
 pub use control_table::{common_indirect_address, common_indirect_data, ControlTable};
 pub use dynamixel_registers::models::{Model, ModelGroup, ModelOrModelGroup};
 pub use dynamixel_registers::{
-    Access, Area, IndirectRange, Register, RegisterData, Unit, UnitScale,
+    pulses_to_radians, radians_to_pulses, Access, Area, IndirectRange, Register, RegisterData,
+    Unit, UnitScale,
 };
+pub use models::position_resolution;
 
 pub(crate) use model_macro::model;
