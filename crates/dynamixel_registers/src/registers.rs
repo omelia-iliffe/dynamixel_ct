@@ -109,6 +109,36 @@ impl RegisterData {
             unit,
         }
     }
+
+    /// The register's [`Addr`] — its address and byte length, i.e. the two values a sync
+    /// read/write needs. Unlike [`RegisterData`] this is hashable, so it can key a map that
+    /// batches operations per register.
+    pub const fn addr(&self) -> Addr {
+        Addr {
+            addr: self.address,
+            len: self.length,
+        }
+    }
+}
+
+/// A register's address and byte length — the two values a sync read/write needs.
+///
+/// [`RegisterData`] carries a `f32` scale and so is not hashable; `Addr` is the hashable
+/// identity of a register, obtained via [`RegisterData::addr`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct Addr {
+    /// Control-table address of the register.
+    pub addr: u16,
+    /// Byte length of the register — usable directly as a sync read/write length.
+    pub len: u16,
+}
+
+impl Addr {
+    /// Create a new [`Addr`].
+    pub const fn new(addr: u16, len: u16) -> Self {
+        Self { addr, len }
+    }
 }
 
 /// A contiguous run of indirect registers, as a `(start address, byte length)` pair — the
