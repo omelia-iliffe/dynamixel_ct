@@ -165,7 +165,7 @@ pub fn position_resolution(model: dynamixel_registers::models::Model) -> u32 {
         Model::YM080_230_R099_RH => 51904512,
         Model::YM080_230_A051_RH => 26738688,
         Model::YM080_230_A099_RH => 51904512,
-        Model::YM110_TEMP => 524288,
+        Model::YM110_400_R099_RH => 51904512,
         _ => panic!("no resolution for model {model}"),
     }
 }
