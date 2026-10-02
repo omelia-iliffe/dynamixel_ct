@@ -51,8 +51,54 @@ pub(crate) fn control_table_from_model_group(
         ModelGroup::XW540 => XW540::table(),
         ModelGroup::YM070 => YM070::table(),
         ModelGroup::YM080 => YM080::table(),
-        _ => panic!("unknown model group"),
+        _ => unreachable!(),
     }
+}
+
+/// The [`RegisterData`](dynamixel_registers::RegisterData) for `register` on any model in
+/// `model_group`, or `None` if the group has no such register. Usable without `std`.
+///
+/// Every [`ModelGroup`](dynamixel_registers::models::ModelGroup) has a table, so the
+/// wildcard arm its `#[non_exhaustive]` forces is unreachable; the `all_models_covered`
+/// test holds that.
+pub const fn register_data_from_model_group(
+    model_group: dynamixel_registers::models::ModelGroup,
+    register: dynamixel_registers::Register,
+) -> Option<dynamixel_registers::RegisterData> {
+    use dynamixel_registers::models::ModelGroup;
+    match model_group {
+        ModelGroup::PH42 => PH42::get(register),
+        ModelGroup::PH54 => PH54::get(register),
+        ModelGroup::PM42 => PM42::get(register),
+        ModelGroup::PM54 => PM54::get(register),
+        ModelGroup::XC330 => XC330::get(register),
+        ModelGroup::XL330 => XL330::get(register),
+        ModelGroup::XM335 => XM335::get(register),
+        ModelGroup::XC430 => XC430::get(register),
+        ModelGroup::XL430 => XL430::get(register),
+        ModelGroup::XD430 => XD430::get(register),
+        ModelGroup::XH430 => XH430::get(register),
+        ModelGroup::XM430 => XM430::get(register),
+        ModelGroup::XD540 => XD540::get(register),
+        ModelGroup::XH540 => XH540::get(register),
+        ModelGroup::XM540 => XM540::get(register),
+        ModelGroup::XW540 => XW540::get(register),
+        ModelGroup::YM070 => YM070::get(register),
+        ModelGroup::YM080 => YM080::get(register),
+        _ => unreachable!(),
+    }
+}
+
+/// The [`RegisterData`](dynamixel_registers::RegisterData) for `register` on a model, or `None`
+/// if the model has no such register. Usable without `std`.
+///
+/// The lookup is by model group, so where a group's members disagree on a unit this
+/// returns the group's `None` unit rather than the model's exact one.
+pub const fn register_data(
+    model: dynamixel_registers::models::Model,
+    register: dynamixel_registers::Register,
+) -> Option<dynamixel_registers::RegisterData> {
+    register_data_from_model_group(model.model_group(), register)
 }
 
 #[cfg(feature = "std")]
@@ -79,7 +125,7 @@ pub(crate) fn indirect_address_blocks_from_model_group(
         ModelGroup::XW540 => XW540::indirect_address_blocks(),
         ModelGroup::YM070 => YM070::indirect_address_blocks(),
         ModelGroup::YM080 => YM080::indirect_address_blocks(),
-        _ => &[],
+        _ => unreachable!(),
     }
 }
 
@@ -107,12 +153,17 @@ pub(crate) fn indirect_data_blocks_from_model_group(
         ModelGroup::XW540 => XW540::indirect_data_blocks(),
         ModelGroup::YM070 => YM070::indirect_data_blocks(),
         ModelGroup::YM080 => YM080::indirect_data_blocks(),
-        _ => &[],
+        _ => unreachable!(),
     }
 }
 
-/// The position encoder resolution in pulses per revolution for a model, from the ROBOTIS docs.
-pub fn position_resolution(model: dynamixel_registers::models::Model) -> u32 {
+/// The position encoder resolution in pulses per revolution for a model, from the
+/// ROBOTIS docs.
+///
+/// Every [`Model`](dynamixel_registers::models::Model) has one, so the wildcard arm
+/// `Model` being `#[non_exhaustive]` forces is unreachable; the `all_models_covered`
+/// test holds that.
+pub const fn position_resolution(model: dynamixel_registers::models::Model) -> u32 {
     use dynamixel_registers::models::Model;
     match model {
         Model::XH430_W350 => 4096,
@@ -162,14 +213,13 @@ pub fn position_resolution(model: dynamixel_registers::models::Model) -> u32 {
         Model::YM080_230_R099_RH => 51904512,
         Model::YM080_230_A051_RH => 26738688,
         Model::YM080_230_A099_RH => 51904512,
-        _ => panic!("no resolution for model {model}"),
+        _ => unreachable!(),
     }
 }
 
 /// The shared position resolution of a model group, or `None` if its models disagree (the Y series).
-#[cfg(feature = "std")]
-pub(crate) fn position_resolution_from_model_group(
-    model_group: &dynamixel_registers::models::ModelGroup,
+pub const fn position_resolution_from_model_group(
+    model_group: dynamixel_registers::models::ModelGroup,
 ) -> Option<u32> {
     use dynamixel_registers::models::ModelGroup;
     match model_group {
@@ -191,6 +241,6 @@ pub(crate) fn position_resolution_from_model_group(
         ModelGroup::XW540 => Some(4096),
         ModelGroup::YM070 => None,
         ModelGroup::YM080 => None,
-        _ => None,
+        _ => unreachable!(),
     }
 }

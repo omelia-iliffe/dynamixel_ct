@@ -58,6 +58,29 @@ pub enum ModelGroup {
 }
 
 impl ModelGroup {
+    /// Every model group, for exhaustive iteration over a `#[non_exhaustive]` enum.
+    /// `test_all_listed` keeps it complete.
+    pub const ALL: &'static [ModelGroup] = &[
+        ModelGroup::PH42,
+        ModelGroup::PH54,
+        ModelGroup::PM42,
+        ModelGroup::PM54,
+        ModelGroup::XC330,
+        ModelGroup::XC430,
+        ModelGroup::XD430,
+        ModelGroup::XD540,
+        ModelGroup::XH430,
+        ModelGroup::XH540,
+        ModelGroup::XL330,
+        ModelGroup::XL430,
+        ModelGroup::XM335,
+        ModelGroup::XM430,
+        ModelGroup::XM540,
+        ModelGroup::XW540,
+        ModelGroup::YM070,
+        ModelGroup::YM080,
+    ];
+
     pub fn contains(&self, model: Model) -> bool {
         self == &model.model_group()
     }
@@ -145,7 +168,60 @@ pub enum Model {
 }
 
 impl Model {
-    pub fn model_group(&self) -> ModelGroup {
+    /// Every supported model, for exhaustive iteration over a `#[non_exhaustive]` enum.
+    /// `test_all_listed` derives the real variant set from the discriminants and fails if
+    /// this list falls behind.
+    pub const ALL: &'static [Model] = &[
+        Model::XL330_M077,
+        Model::XL330_M288,
+        Model::XC330_M181,
+        Model::XC330_M288,
+        Model::XC330_T181,
+        Model::XC330_T288,
+        Model::XC430_W150,
+        Model::XC430_W240,
+        Model::XL430_W250,
+        Model::XM430_W210,
+        Model::XM430_W350,
+        Model::XM540_W150,
+        Model::XM540_W270,
+        Model::XH430_V210,
+        Model::XH430_V350,
+        Model::XH430_W210,
+        Model::XH430_W350,
+        Model::XH540_W150,
+        Model::XH540_W270,
+        Model::XH540_V150,
+        Model::XH540_V270,
+        Model::XD430_T210,
+        Model::XD430_T350,
+        Model::XD540_T150,
+        Model::XD540_T270,
+        Model::XW540_T140,
+        Model::XW540_T260,
+        Model::XW540_H260,
+        Model::XM335_T323,
+        Model::PH42_020_S300_R,
+        Model::PH54_100_S500_R,
+        Model::PH54_200_S500_R,
+        Model::PM42_010_S260_R,
+        Model::PM54_040_S250_R,
+        Model::PM54_060_S250_R,
+        Model::YM070_210_M001_RH,
+        Model::YM070_210_B001_RH,
+        Model::YM070_200_R051_RH,
+        Model::YM070_200_R099_RH,
+        Model::YM070_210_A051_RH,
+        Model::YM070_200_A099_RH,
+        Model::YM080_230_M001_RH,
+        Model::YM080_230_B001_RH,
+        Model::YM080_230_R051_RH,
+        Model::YM080_230_R099_RH,
+        Model::YM080_230_A051_RH,
+        Model::YM080_230_A099_RH,
+    ];
+
+    pub const fn model_group(&self) -> ModelGroup {
         use Model::*;
         match self {
             XD540_T270 | XD540_T150 => ModelGroup::XD540,
@@ -229,6 +305,36 @@ impl PartialEq<u16> for Model {
 #[cfg(test)]
 mod tests {
     use super::{Model, UnknownModel};
+
+    #[test]
+    fn test_all_listed() {
+        use num_traits::FromPrimitive;
+
+        // Every discriminant the enum actually has, derived rather than listed, so a new
+        // variant that is missing from `Model::ALL` fails here.
+        let variants: Vec<Model> = (0..=u16::MAX).filter_map(Model::from_u16).collect();
+        assert_eq!(variants.len(), Model::ALL.len());
+        for model in &variants {
+            assert!(
+                Model::ALL.contains(model),
+                "{model} missing from Model::ALL"
+            );
+        }
+
+        // `model_group` is an exhaustive match in this crate, so the groups reachable from
+        // `Model::ALL` are every group that exists.
+        let mut groups: Vec<super::ModelGroup> =
+            Model::ALL.iter().map(|m| m.model_group()).collect();
+        groups.sort();
+        groups.dedup();
+        assert_eq!(groups.len(), super::ModelGroup::ALL.len());
+        for group in &groups {
+            assert!(
+                super::ModelGroup::ALL.contains(group),
+                "{group} missing from ModelGroup::ALL"
+            );
+        }
+    }
 
     #[test]
     fn test_model_from_number() {

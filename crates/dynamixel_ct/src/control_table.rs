@@ -77,7 +77,7 @@ impl ControlTable {
     pub fn position_resolution(&self) -> Option<u32> {
         self.model
             .map(crate::models::position_resolution)
-            .or_else(|| crate::models::position_resolution_from_model_group(&self.model_group))
+            .or_else(|| crate::models::position_resolution_from_model_group(self.model_group))
     }
 
     /// Convert a raw position value (in pulses) to radians, if the resolution is known.
@@ -316,6 +316,30 @@ mod test {
             ControlTable::new_with_model(Model::YM070_200_R099_RH).position_resolution(),
             Some(51_904_512)
         );
+    }
+
+    #[test]
+    fn all_models_covered() {
+        // `Model`/`ModelGroup` are `#[non_exhaustive]`, so the generated lookups in this
+        // crate need a wildcard arm that rustc cannot check. These `unreachable!()` arms
+        // hold only while every variant is in the tables, which is what this asserts: a
+        // model added to `dynamixel_registers` without re-running the generator fails here
+        // rather than panicking in a caller.
+        for &model in Model::ALL {
+            let _ = crate::position_resolution(model);
+            assert!(
+                crate::register_data(model, Register::ModelNumber).is_some(),
+                "{model} has no table"
+            );
+        }
+        for &group in ModelGroup::ALL {
+            let _ = crate::position_resolution_from_model_group(group);
+            assert!(
+                crate::register_data_from_model_group(group, Register::ModelNumber).is_some(),
+                "{group} has no table"
+            );
+            let _ = ControlTable::new(group);
+        }
     }
 
     #[test]

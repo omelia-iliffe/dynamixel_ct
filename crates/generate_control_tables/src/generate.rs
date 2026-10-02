@@ -46,8 +46,63 @@ pub fn create_match(mod_path: &PathBuf, all_models: &[ModelGroup]) -> anyhow::Re
             )?;
         }
     }
-    writeln!(mod_file, r#"        _ => panic!("unknown model group")"#)?;
+    writeln!(mod_file, "        _ => unreachable!(),")?;
     writeln!(mod_file, "    }}")?;
+    writeln!(mod_file, "}}")?;
+
+    // The `no_std` register lookup: each model-group struct's `get` is a `const fn` match,
+    // so dispatching to it gives `ControlTable::get`-style access without the HashMap.
+    writeln!(mod_file)?;
+    writeln!(mod_file, "/// The [`RegisterData`](dynamixel_registers::RegisterData) for `register` on any model in")?;
+    writeln!(
+        mod_file,
+        "/// `model_group`, or `None` if the group has no such register. Usable without `std`."
+    )?;
+    writeln!(mod_file, "///")?;
+    writeln!(
+        mod_file,
+        "/// Every [`ModelGroup`](dynamixel_registers::models::ModelGroup) has a table, so the"
+    )?;
+    writeln!(
+        mod_file,
+        "/// wildcard arm its `#[non_exhaustive]` forces is unreachable; the `all_models_covered`"
+    )?;
+    writeln!(mod_file, "/// test holds that.")?;
+    writeln!(mod_file, "pub const fn register_data_from_model_group(model_group: dynamixel_registers::models::ModelGroup, register: dynamixel_registers::Register) -> Option<dynamixel_registers::RegisterData> {{")?;
+    writeln!(mod_file, "    use dynamixel_registers::models::ModelGroup;")?;
+    writeln!(mod_file, "    match model_group {{")?;
+    for group in all_models {
+        for alias in group.alias().keys() {
+            writeln!(
+                mod_file,
+                "        ModelGroup::{alias} => {alias}::get(register),"
+            )?;
+        }
+    }
+    writeln!(mod_file, "        _ => unreachable!(),")?;
+    writeln!(mod_file, "    }}")?;
+    writeln!(mod_file, "}}")?;
+
+    writeln!(mod_file)?;
+    writeln!(mod_file, "/// The [`RegisterData`](dynamixel_registers::RegisterData) for `register` on a model, or `None`")?;
+    writeln!(
+        mod_file,
+        "/// if the model has no such register. Usable without `std`."
+    )?;
+    writeln!(mod_file, "///")?;
+    writeln!(
+        mod_file,
+        "/// The lookup is by model group, so where a group's members disagree on a unit this"
+    )?;
+    writeln!(
+        mod_file,
+        "/// returns the group's `None` unit rather than the model's exact one."
+    )?;
+    writeln!(mod_file, "pub const fn register_data(model: dynamixel_registers::models::Model, register: dynamixel_registers::Register) -> Option<dynamixel_registers::RegisterData> {{")?;
+    writeln!(
+        mod_file,
+        "    register_data_from_model_group(model.model_group(), register)"
+    )?;
     writeln!(mod_file, "}}")?;
 
     // Dispatch the per-group indirect block layouts, backing the dynamic
@@ -82,7 +137,7 @@ pub fn create_match(mod_path: &PathBuf, all_models: &[ModelGroup]) -> anyhow::Re
                 }
             }
         }
-        writeln!(mod_file, "        _ => &[],")?;
+        writeln!(mod_file, "        _ => unreachable!(),")?;
         writeln!(mod_file, "    }}")?;
         writeln!(mod_file, "}}")?;
     }
@@ -106,21 +161,29 @@ pub fn create_resolution(
     writeln!(mod_file)?;
     writeln!(
         mod_file,
-        "/// The position encoder resolution in pulses per revolution for a model, from the ROBOTIS docs."
+        "/// The position encoder resolution in pulses per revolution for a model, from the"
+    )?;
+    writeln!(mod_file, "/// ROBOTIS docs.")?;
+    writeln!(mod_file, "///")?;
+    writeln!(
+        mod_file,
+        "/// Every [`Model`](dynamixel_registers::models::Model) has one, so the wildcard arm"
     )?;
     writeln!(
         mod_file,
-        "pub fn position_resolution(model: dynamixel_registers::models::Model) -> u32 {{"
+        "/// `Model` being `#[non_exhaustive]` forces is unreachable; the `all_models_covered`"
+    )?;
+    writeln!(mod_file, "/// test holds that.")?;
+    writeln!(
+        mod_file,
+        "pub const fn position_resolution(model: dynamixel_registers::models::Model) -> u32 {{"
     )?;
     writeln!(mod_file, "    use dynamixel_registers::models::Model;")?;
     writeln!(mod_file, "    match model {{")?;
     for (model, res) in resolutions {
         writeln!(mod_file, "        Model::{model} => {res},")?;
     }
-    writeln!(
-        mod_file,
-        r#"        _ => panic!("no resolution for model {{model}}"),"#
-    )?;
+    writeln!(mod_file, "        _ => unreachable!(),")?;
     writeln!(mod_file, "    }}")?;
     writeln!(mod_file, "}}")?;
 
@@ -138,8 +201,7 @@ pub fn create_resolution(
         mod_file,
         "/// The shared position resolution of a model group, or `None` if its models disagree (the Y series)."
     )?;
-    writeln!(mod_file, r#"#[cfg(feature = "std")]"#)?;
-    writeln!(mod_file, "pub(crate) fn position_resolution_from_model_group(model_group: &dynamixel_registers::models::ModelGroup) -> Option<u32> {{")?;
+    writeln!(mod_file, "pub const fn position_resolution_from_model_group(model_group: dynamixel_registers::models::ModelGroup) -> Option<u32> {{")?;
     writeln!(mod_file, "    use dynamixel_registers::models::ModelGroup;")?;
     writeln!(mod_file, "    match model_group {{")?;
     for (group, values) in &by_group {
@@ -148,7 +210,7 @@ pub fn create_resolution(
             Err(_) => writeln!(mod_file, "        ModelGroup::{group} => None,")?,
         }
     }
-    writeln!(mod_file, "        _ => None,")?;
+    writeln!(mod_file, "        _ => unreachable!(),")?;
     writeln!(mod_file, "    }}")?;
     writeln!(mod_file, "}}")?;
 

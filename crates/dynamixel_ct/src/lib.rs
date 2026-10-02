@@ -30,6 +30,17 @@
 //! println!("{:?}", YM070::get(GoalPosition));
 //! println!("{:?}", new.get(GoalPosition));
 //! ```
+//!
+//! ### Example
+//! Without `std` there is no [`ControlTable`], but a runtime [`Model`] or [`ModelGroup`]
+//! can still be looked up with [`register_data`] / [`register_data_from_model_group`]:
+//! ```rust
+//! use dynamixel_ct::{register_data, register_data_from_model_group, Model, ModelGroup};
+//! use dynamixel_registers::Register::GoalPosition;
+//!
+//! println!("{:?}", register_data(Model::XM430_W210, GoalPosition));
+//! println!("{:?}", register_data_from_model_group(ModelGroup::XM430, GoalPosition));
+//! ```
 #![warn(missing_docs)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -45,6 +56,9 @@ pub use dynamixel_registers::{
     pulses_to_radians, radians_to_pulses, Access, Addr, Area, IndirectRange, Register,
     RegisterData, Unit, UnitScale,
 };
-pub use models::position_resolution;
+pub use models::{
+    position_resolution, position_resolution_from_model_group, register_data,
+    register_data_from_model_group,
+};
 
 pub(crate) use model_macro::model;
