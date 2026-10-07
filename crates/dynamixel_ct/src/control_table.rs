@@ -374,4 +374,28 @@ mod test {
         // Small-X data (224) and Y data (634) never overlap.
         assert!(super::common_indirect_data(&[&xc, &ym]).is_empty());
     }
+
+    #[test]
+    fn test_q_series() {
+        for (number, expected) in [
+            (8030, Model::QC060_200_R020_RE),
+            (8050, Model::QC080_240_R020_RE),
+        ] {
+            let model = Model::try_from(number).unwrap();
+            assert_eq!(model, expected);
+            let ct = ControlTable::from(model);
+            assert_eq!(ct.position_resolution(), Some(65536));
+
+            let addr = |r| ct.get(r).unwrap().address;
+            assert_eq!(addr(Register::TorqueEnable), 512);
+            assert_eq!(addr(Register::GoalPosition), 532);
+            assert_eq!(addr(Register::PresentPosition), 552);
+            assert_eq!(addr(Register::ErrorCode), 153);
+
+            // Only what the Wizard showed: no Y-series registers borrowed, and no indirect blocks.
+            assert!(ct.get(Register::ElectronicGearRatioNumerator).is_err());
+            assert!(ct.get(Register::PresentCurrent).is_err());
+            assert!(ct.indirect_data_blocks().is_empty());
+        }
+    }
 }

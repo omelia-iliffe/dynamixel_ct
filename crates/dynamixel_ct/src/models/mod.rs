@@ -23,6 +23,8 @@ mod xh430w;
 pub use xh430w::*;
 mod xh430v;
 pub use xh430v::*;
+mod qc060_qc080;
+pub use qc060_qc080::*;
 
 #[cfg(feature = "std")]
 pub(crate) fn control_table_from_model_group(
@@ -51,6 +53,8 @@ pub(crate) fn control_table_from_model_group(
         ModelGroup::XW540 => XW540::table(),
         ModelGroup::YM070 => YM070::table(),
         ModelGroup::YM080 => YM080::table(),
+        ModelGroup::QC060 => QC060::table(),
+        ModelGroup::QC080 => QC080::table(),
         _ => unreachable!(),
     }
 }
@@ -85,6 +89,8 @@ pub const fn register_data_from_model_group(
         ModelGroup::XW540 => XW540::get(register),
         ModelGroup::YM070 => YM070::get(register),
         ModelGroup::YM080 => YM080::get(register),
+        ModelGroup::QC060 => QC060::get(register),
+        ModelGroup::QC080 => QC080::get(register),
         _ => unreachable!(),
     }
 }
@@ -125,6 +131,8 @@ pub(crate) fn indirect_address_blocks_from_model_group(
         ModelGroup::XW540 => XW540::indirect_address_blocks(),
         ModelGroup::YM070 => YM070::indirect_address_blocks(),
         ModelGroup::YM080 => YM080::indirect_address_blocks(),
+        ModelGroup::QC060 => QC060::indirect_address_blocks(),
+        ModelGroup::QC080 => QC080::indirect_address_blocks(),
         _ => unreachable!(),
     }
 }
@@ -153,6 +161,8 @@ pub(crate) fn indirect_data_blocks_from_model_group(
         ModelGroup::XW540 => XW540::indirect_data_blocks(),
         ModelGroup::YM070 => YM070::indirect_data_blocks(),
         ModelGroup::YM080 => YM080::indirect_data_blocks(),
+        ModelGroup::QC060 => QC060::indirect_data_blocks(),
+        ModelGroup::QC080 => QC080::indirect_data_blocks(),
         _ => unreachable!(),
     }
 }
@@ -213,6 +223,9 @@ pub const fn position_resolution(model: dynamixel_registers::models::Model) -> u
         Model::YM080_230_R099_RH => 51904512,
         Model::YM080_230_A051_RH => 26738688,
         Model::YM080_230_A099_RH => 51904512,
+        // From the Wizard: Max Position Limit 32767 reads as 179.99°.
+        Model::QC060_200_R020_RE => 65536,
+        Model::QC080_240_R020_RE => 65536,
         _ => unreachable!(),
     }
 }
@@ -241,6 +254,8 @@ pub const fn position_resolution_from_model_group(
         ModelGroup::XW540 => Some(4096),
         ModelGroup::YM070 => None,
         ModelGroup::YM080 => None,
+        ModelGroup::QC060 => Some(65536),
+        ModelGroup::QC080 => Some(65536),
         _ => unreachable!(),
     }
 }
