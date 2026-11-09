@@ -55,6 +55,8 @@ pub enum ModelGroup {
     XW540,
     YM070,
     YM080,
+    QC060,
+    QC080,
 }
 
 impl ModelGroup {
@@ -79,6 +81,8 @@ impl ModelGroup {
         ModelGroup::XW540,
         ModelGroup::YM070,
         ModelGroup::YM080,
+        ModelGroup::QC060,
+        ModelGroup::QC080,
     ];
 
     pub fn contains(&self, model: Model) -> bool {
@@ -165,6 +169,9 @@ pub enum Model {
     YM080_230_R099_RH = 4150,
     YM080_230_A051_RH = 4160,
     YM080_230_A099_RH = 4170,
+
+    QC060_200_R020_RE = 8030,
+    QC080_240_R020_RE = 8050,
 }
 
 impl Model {
@@ -219,6 +226,8 @@ impl Model {
         Model::YM080_230_R099_RH,
         Model::YM080_230_A051_RH,
         Model::YM080_230_A099_RH,
+        Model::QC060_200_R020_RE,
+        Model::QC080_240_R020_RE,
     ];
 
     pub const fn model_group(&self) -> ModelGroup {
@@ -244,6 +253,8 @@ impl Model {
             PH54_100_S500_R | PH54_200_S500_R => ModelGroup::PH54,
             PM42_010_S260_R => ModelGroup::PM42,
             PM54_040_S250_R | PM54_060_S250_R => ModelGroup::PM54,
+            QC060_200_R020_RE => ModelGroup::QC060,
+            QC080_240_R020_RE => ModelGroup::QC080,
         }
     }
 }
