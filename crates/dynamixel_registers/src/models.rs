@@ -55,6 +55,7 @@ pub enum ModelGroup {
     XW540,
     YM070,
     YM080,
+    YM110,
     QC060,
     QC080,
 }
@@ -81,6 +82,7 @@ impl ModelGroup {
         ModelGroup::XW540,
         ModelGroup::YM070,
         ModelGroup::YM080,
+        ModelGroup::YM110,
         ModelGroup::QC060,
         ModelGroup::QC080,
     ];
@@ -170,6 +172,8 @@ pub enum Model {
     YM080_230_A051_RH = 4160,
     YM080_230_A099_RH = 4170,
 
+    YM110_400_R099_RH = 4270,
+
     QC060_200_R020_RE = 8030,
     QC080_240_R020_RE = 8050,
 }
@@ -226,6 +230,7 @@ impl Model {
         Model::YM080_230_R099_RH,
         Model::YM080_230_A051_RH,
         Model::YM080_230_A099_RH,
+        Model::YM110_400_R099_RH,
         Model::QC060_200_R020_RE,
         Model::QC080_240_R020_RE,
     ];
@@ -253,6 +258,7 @@ impl Model {
             PH54_100_S500_R | PH54_200_S500_R => ModelGroup::PH54,
             PM42_010_S260_R => ModelGroup::PM42,
             PM54_040_S250_R | PM54_060_S250_R => ModelGroup::PM54,
+            YM110_400_R099_RH => ModelGroup::YM110,
             QC060_200_R020_RE => ModelGroup::QC060,
             QC080_240_R020_RE => ModelGroup::QC080,
         }
